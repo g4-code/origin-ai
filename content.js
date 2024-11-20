@@ -1,19 +1,32 @@
 let currentPopup = null;
 
-document.addEventListener("dblclick", (e) => {
+document.addEventListener("dblclick", async (e) => {
   const selection = window.getSelection();
   const selectedText = selection.toString().trim();
 
   if (selectedText) {
-    // Remove existing popup if present
     if (currentPopup) {
       currentPopup.remove();
     }
 
-    // Create new popup
-    const popup = createPopup(selectedText, e.pageX, e.pageY);
-    document.body.appendChild(popup);
-    currentPopup = popup;
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: "getData",
+        text: selectedText,
+      });
+
+      if (response && response.success) {
+        const popup = createPopup(
+          response.selectedText + response.customMessage,
+          e.pageX,
+          e.pageY
+        );
+        document.body.appendChild(popup);
+        currentPopup = popup;
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
   }
 });
 
