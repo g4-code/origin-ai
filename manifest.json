@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "test ety",
+  "version": "1.0",
+  "description": "Select words to analyze them in a popup and side panel",
+  "permissions": ["activeTab", "sidePanel", "scripting"],
+  "action": {
+    "default_title": "Word Selection Helper"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["styles.css"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
