@@ -17,11 +17,23 @@ document.addEventListener("dblclick", (e) => {
   }
 });
 
-// Close popup when clicking outside
+// Close popup and side panel when clicking outside
 document.addEventListener("click", (e) => {
-  if (currentPopup && !currentPopup.contains(e.target)) {
-    currentPopup.remove();
-    currentPopup = null;
+  if (currentPopup) {
+    // Only close if we're not clicking inside the popup
+    if (!currentPopup.contains(e.target)) {
+      currentPopup.remove();
+      currentPopup = null;
+      // Send message to close side panel
+      chrome.runtime.sendMessage({
+        action: "closeSidePanel",
+      });
+    }
+  } else {
+    // If there's no popup, close side panel anyway
+    chrome.runtime.sendMessage({
+      action: "closeSidePanel",
+    });
   }
 });
 
