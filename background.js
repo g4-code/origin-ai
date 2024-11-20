@@ -40,6 +40,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Must return false for async operations
     return false;
   }
+
+  if (message.action === "getData") {
+    // Send response for getData action
+    sendResponse({
+      selectedText: message.text,
+      customMessage: "hey!!!",
+      success: true,
+    });
+    return true; // Required for async response
+  }
 });
 
 // Clean up when tab is closed
