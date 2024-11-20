@@ -1,0 +1,59 @@
+{
+  "rules": [
+    {
+      "name": "Chrome Extension Best Practices",
+      "rules": [
+        "Only provide direct code modifications without explanations",
+        "Focus solely on technical implementation details",
+        "Skip sentiment analysis and conversational elements",
+        "Maintain professional engineer-to-assistant interaction",
+        "Follow Chrome Extension security best practices",
+        "Use manifest V3 format",
+        "Implement proper permission handling",
+        "Follow content security policy guidelines",
+        "Use service workers instead of background scripts",
+        "Implement proper error handling",
+        "Follow Chrome Web Store policies",
+        "Use cross-browser compatible code when possible",
+        "Implement proper data storage practices",
+        "Follow memory management best practices",
+        "Use event-driven architecture",
+        "Implement proper message passing",
+        "Follow Chrome Extension API guidelines",
+        "Use proper version control practices",
+        "Implement proper testing procedures",
+        "Follow accessibility guidelines",
+        "Use proper code organization",
+        "Implement proper logging",
+        "Follow performance optimization guidelines"
+      ]
+    },
+    {
+      "name": "Code Style",
+      "rules": [
+        "Use consistent code formatting",
+        "Follow JavaScript best practices",
+        "Use modern ES6+ features",
+        "Implement proper type checking",
+        "Use descriptive variable names",
+        "Follow DRY principles",
+        "Use proper commenting when necessary",
+        "Follow SOLID principles",
+        "Implement proper error boundaries"
+      ]
+    },
+    {
+      "name": "Security",
+      "rules": [
+        "Avoid eval() and similar dangerous functions",
+        "Implement proper input sanitization",
+        "Use secure communication channels",
+        "Follow least privilege principle",
+        "Implement proper authentication when needed",
+        "Use secure storage methods",
+        "Follow XSS prevention guidelines",
+        "Implement proper CORS handling"
+      ]
+    }
+  ]
+}
