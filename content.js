@@ -17,7 +17,7 @@ document.addEventListener("dblclick", async (e) => {
 
       if (response && response.success) {
         const popup = createPopup(
-          response.selectedText + response.customMessage,
+          `${response.selectedText}\n\nEtymology:\n${response.etymology}`,
           e.pageX,
           e.pageY
         );
@@ -57,6 +57,7 @@ function createPopup(text, x, y) {
   const textarea = document.createElement("textarea");
   textarea.value = text;
   textarea.readOnly = true;
+  textarea.style.height = "150px";
 
   const moreButton = document.createElement("button");
   moreButton.textContent = "More";
