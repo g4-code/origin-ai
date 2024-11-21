@@ -44,18 +44,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "getData") {
-    getEtymology(message.text)
-      .then((etymology) => {
+    Promise.all([
+      getEtymology(message.text),
+      getUsageExamples(message.text),
+      getSynonymsAntonyms(message.text),
+      getRelatedImages(message.text),
+    ])
+      .then(([etymology, usage, synonyms, images]) => {
         sendResponse({
           selectedText: message.text,
           etymology: etymology,
+          usage: usage,
+          synonyms: synonyms,
+          images: images,
           success: true,
         });
       })
       .catch((error) => {
         sendResponse({
           selectedText: message.text,
-          etymology: "Error fetching etymology",
+          error: "Error fetching data",
           success: false,
         });
       });
@@ -142,4 +150,83 @@ async function getEtymology(word) {
     }
     throw error;
   }
+}
+
+async function getUsageExamples(word) {
+  try {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=" +
+        API_KEY,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `Provide 3 clear and concise example sentences using the word "${word}".`,
+                },
+            ***REMOVED***
+            },
+        ***REMOVED***
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+          },
+        }),
+      }
+    );
+
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text || "No examples found.";
+  } catch (error) {
+    console.error("Error getting usage examples:", error);
+    throw error;
+  }
+}
+
+async function getSynonymsAntonyms(word) {
+  try {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=" +
+        API_KEY,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `List 5 synonyms and 5 antonyms for the word "${word}". Format as two separate lists.`,
+                },
+            ***REMOVED***
+            },
+        ***REMOVED***
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+          },
+        }),
+      }
+    );
+
+    const data = await response.json();
+    return (
+      data.candidates[0].content.parts[0].text || "No synonyms/antonyms found."
+    );
+  } catch (error) {
+    console.error("Error getting synonyms/antonyms:", error);
+    throw error;
+  }
+}
+
+async function getRelatedImages(word) {
+  // For now, return placeholder text since image handling requires additional setup
+  return "Image functionality will be implemented in the next phase.";
 }
