@@ -25,3 +25,30 @@
   border-radius: 4px;
   cursor: pointer;
 }
+
+.panel-container {
+  padding: 16px;
+}
+
+.section {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.section h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+  color: #333;
+}
+
+#etymologyContent,
+#usageContent,
+#synonymContent,
+#imagesContent {
+  font-size: 14px;
+  line-height: 1.5;
+}

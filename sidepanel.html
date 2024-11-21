@@ -1,24 +1,31 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <style>
-      body {
-        padding: 20px;
-        font-family: Arial, sans-serif;
-      }
-      #selectedWord {
-        width: 100%;
-        min-height: 100px;
-        margin-top: 10px;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-    </style>
+    <title>Word Info Panel</title>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <h3>Selected Word</h3>
-    <div id="selectedWord"></div>
+    <div class="panel-container">
+      <div class="section etymology-section">
+        <h2>Etymology</h2>
+        <div id="etymologyContent"></div>
+      </div>
+
+      <div class="section usage-section">
+        <h2>Usage Examples</h2>
+        <div id="usageContent"></div>
+      </div>
+
+      <div class="section synonym-section">
+        <h2>Synonyms & Antonyms</h2>
+        <div id="synonymContent"></div>
+      </div>
+
+      <div class="section images-section">
+        <h2>Related Images</h2>
+        <div id="imagesContent"></div>
+      </div>
+    </div>
     <script src="sidepanel.js"></script>
   </body>
 </html>
