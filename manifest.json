@@ -1,9 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "test ety",
+  "name": "test ety built in ai",
   "version": "1.0",
   "description": "Select words to analyze them in a popup and side panel",
-  "permissions": ["activeTab", "sidePanel", "scripting"],
+  "permissions": [
+    "activeTab",
+    "sidePanel",
+    "scripting",
+    "aiLanguageModelOriginTrial"
+  ],
   "action": {
     "default_title": "Word Selection Helper"
   },
@@ -19,5 +24,8 @@
   ],
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "trial_tokens": [
+    "AtEYBbvXEoJS+QkC+55raFH3CexhmLke5wT/86CJi8AvWUf4JOCNX4EXbs97Wxy8mzELpB977+z8qw9gjJQC/AAAAAB4eyJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8va2lsY2xoZ2NrYmxwZG1iZWZobm5oZ2JhcGpqYWpsbWQiLCJmZWF0dXJlIjoiQUlQcm9tcHRBUElGb3JFeHRlbnNpb24iLCJleHBpcnkiOjE3NjA0ODYzOTl9"
+  ]
 }
