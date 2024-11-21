@@ -1,29 +1,24 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Word Info Panel</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title>Word Details</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
   </head>
   <body>
-    <div class="panel-container">
-      <div class="section etymology-section">
-        <h2>Etymology</h2>
-        <div id="etymologyContent"></div>
+    <div class="container">
+      <div class="section">
+        <h3>Etymology</h3>
+        <textarea id="etymology" readonly></textarea>
       </div>
 
-      <div class="section usage-section">
-        <h2>Usage Examples</h2>
-        <div id="usageContent"></div>
+      <div class="section">
+        <h3>Usage Examples</h3>
+        <textarea id="usage" readonly></textarea>
       </div>
 
-      <div class="section synonym-section">
-        <h2>Synonyms & Antonyms</h2>
-        <div id="synonymContent"></div>
-      </div>
-
-      <div class="section images-section">
-        <h2>Related Images</h2>
-        <div id="imagesContent"></div>
+      <div class="section">
+        <h3>Synonyms & Antonyms</h3>
+        <textarea id="synonyms" readonly></textarea>
       </div>
     </div>
     <script src="sidepanel.js"></script>

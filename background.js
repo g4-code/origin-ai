@@ -12,12 +12,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     // Open the side panel
-    chrome.sidePanel.open({ tabId: sender.tab.id }).catch((error) => {
-      console.error("Error opening side panel:", error);
-    });
+    chrome.sidePanel
+      .open({ tabId: sender.tab.id })
+      .then(() => {
+        // After panel is opened, send the update message with the word
+        return chrome.runtime.sendMessage({
+          action: "updateSidePanel",
+          word: message.word,
+        });
+      })
+      .catch((error) => {
+        console.error("Error opening side panel or sending update:", error);
+      });
 
-    // Must return false for async operations
-    return false;
+    return true;
   }
 
   if (message.action === "closeSidePanel") {
@@ -43,9 +51,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  if (message.action === "getData") {
+  if (message.action === "getPopupData") {
+    // Lightweight query just for popup
+    getEtymologyForPopup(message.text)
+      .then((etymology) => {
+        sendResponse({
+          selectedText: message.text,
+          etymology: etymology,
+          success: true,
+        });
+      })
+      .catch((error) => {
+        sendResponse({
+          selectedText: message.text,
+          etymology: "Error fetching etymology",
+          success: false,
+        });
+      });
+    return true;
+  }
+
+  if (message.action === "getSidePanelData") {
+    // Full data query for sidepanel
     Promise.all([
-      getEtymology(message.text),
+      getEtymologyForSidePanel(message.text),
       getUsageExamples(message.text),
       getSynonymsAntonyms(message.text),
       getRelatedImages(message.text),
@@ -67,7 +96,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           success: false,
         });
       });
-    return true; // Required for async response
+    return true;
+  }
+
+  if (message.action === "getStoredWord") {
+    const word = tabWords.get(message.tabId);
+    if (word) {
+      chrome.runtime.sendMessage({
+        action: "updateSidePanel",
+        word: word,
+      });
+    }
+    return false;
   }
 });
 
@@ -229,4 +269,76 @@ async function getSynonymsAntonyms(word) {
 async function getRelatedImages(word) {
   // For now, return placeholder text since image handling requires additional setup
   return "Image functionality will be implemented in the next phase.";
+}
+
+async function getEtymologyForPopup(word) {
+  try {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=" +
+        API_KEY,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `Give a very brief etymology of "${word}" in 1-2 sentences.`,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 256, // Shorter response for popup
+          },
+        }),
+      }
+    );
+
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text || "No etymology found.";
+  } catch (error) {
+    console.error("Error getting popup etymology:", error);
+    throw error;
+  }
+}
+
+async function getEtymologyForSidePanel(word) {
+  try {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=" +
+        API_KEY,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `Provide a detailed etymology of "${word}", including its historical development and original language roots.`,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+          },
+        }),
+      }
+    );
+
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text || "No etymology found.";
+  } catch (error) {
+    console.error("Error getting sidepanel etymology:", error);
+    throw error;
+  }
 }
