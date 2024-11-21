@@ -19,7 +19,7 @@ document.addEventListener("dblclick", async (e) => {
 
     try {
       const response = await chrome.runtime.sendMessage({
-        action: "getData",
+        action: "getPopupData",
         text: selectedText,
       });
 
@@ -66,10 +66,11 @@ function createPopup(text, x, y) {
 
   const moreButton = document.createElement("button");
   moreButton.textContent = "More";
-  moreButton.addEventListener("click", () => {
+  moreButton.addEventListener("click", async () => {
+    const word = text.split("\n")[0];
     chrome.runtime.sendMessage({
       action: "openSidePanel",
-      word: text,
+      word: word,
     });
   });
 

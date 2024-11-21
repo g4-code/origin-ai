@@ -52,3 +52,31 @@
   font-size: 14px;
   line-height: 1.5;
 }
+
+.container {
+  padding: 20px;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical;
+  font-family: Arial, sans-serif;
+  margin-bottom: 15px;
+}
+
+textarea:read-only {
+  background-color: #f9f9f9;
+}
