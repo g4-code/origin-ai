@@ -75,13 +75,33 @@ async function getEtymologyForPopup(word) {
 
 async function getEtymologyForSidePanel(word) {
   try {
+    // First send loading state
+    chrome.runtime.sendMessage({
+      action: "updateSidePanelLoading",
+      loading: true,
+    });
+
     const session = await initAISession();
     const prompt = `Provide a detailed etymology of "${word}", including its historical development and original language roots.`;
 
     const response = await session.prompt(prompt);
+
+    // Send completion state with data
+    chrome.runtime.sendMessage({
+      action: "updateSidePanelLoading",
+      loading: false,
+      data: response || "No etymology found.",
+    });
+
     return response || "No etymology found.";
   } catch (error) {
     console.error("Error getting sidepanel etymology:", error);
+    // Send error state
+    chrome.runtime.sendMessage({
+      action: "updateSidePanelLoading",
+      loading: false,
+      error: "Error getting etymology.",
+    });
     return "Error getting etymology.";
   }
 }
@@ -205,7 +225,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "getSidePanelData") {
     getEtymologyForSidePanel(message.text)
       .then((etymology) => {
-        console.log("etymology.....", etymology);
+        // The loading states are now handled inside getEtymologyForSidePanel
         sendResponse({
           selectedText: message.text,
           etymology: etymology,
@@ -219,35 +239,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           success: false,
         });
       });
-
-    // Full data query for sidepanel
-    // Promise.all([
-    //   getEtymologyForSidePanel(message.text),
-    //   getUsageExamples(message.text),
-    //   getSynonymsAntonyms(message.text),
-    //   //getRelatedImages(message.text),
-    // ])
-    //   .then(([etymology, usage, synonyms, images]) => {
-    //     console.log("etymology", etymology);
-    //     console.log("usage", usage);
-    //     console.log("synonyms", synonyms);
-    //     //console.log("images", images);
-    //     sendResponse({
-    //       selectedText: message.text,
-    //       etymology: etymology,
-    //       usage: usage,
-    //       synonyms: synonyms,
-    //       //images: images,
-    //       success: true,
-    //     });
-    //   })
-    //   .catch((error) => {
-    //     sendResponse({
-    //       selectedText: message.text,
-    //       error: "Error fetching data",
-    //       success: false,
-    //     });
-    //   });
     return true;
   }
 
