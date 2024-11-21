@@ -11,18 +11,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       tabWords.set(sender.tab.id, message.word);
     }
 
-    // Open the side panel
+    // Open the side panel first
     chrome.sidePanel
       .open({ tabId: sender.tab.id })
       .then(() => {
-        // After panel is opened, send the update message with the word
-        return chrome.runtime.sendMessage({
-          action: "updateSidePanel",
-          word: message.word,
-        });
+        // Add a small delay to ensure the panel is loaded
+        setTimeout(() => {
+          chrome.runtime
+            .sendMessage({
+              action: "updateSidePanel",
+              word: message.word,
+            })
+            .catch((error) => {
+              // It's okay if this fails, the panel will request the data when it loads
+              console.log(
+                "Panel not ready yet, it will request data when loaded"
+              );
+            });
+        }, 500);
       })
       .catch((error) => {
-        console.error("Error opening side panel or sending update:", error);
+        console.error("Error opening side panel:", error);
       });
 
     return true;
@@ -220,11 +229,20 @@ async function getUsageExamples(word) {
       }
     );
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     const data = await response.json();
-    return data.candidates[0].content.parts[0].text || "No examples found.";
+
+    // Add proper response structure checking
+    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      return data.candidates[0].content.parts[0].text;
+    }
+    return "No examples found.";
   } catch (error) {
     console.error("Error getting usage examples:", error);
-    throw error;
+    return "Error getting usage examples.";
   }
 }
 
@@ -256,13 +274,20 @@ async function getSynonymsAntonyms(word) {
       }
     );
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     const data = await response.json();
-    return (
-      data.candidates[0].content.parts[0].text || "No synonyms/antonyms found."
-    );
+
+    // Add proper response structure checking
+    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      return data.candidates[0].content.parts[0].text;
+    }
+    return "No synonyms/antonyms found.";
   } catch (error) {
     console.error("Error getting synonyms/antonyms:", error);
-    throw error;
+    return "Error getting synonyms and antonyms.";
   }
 }
 
@@ -335,10 +360,19 @@ async function getEtymologyForSidePanel(word) {
       }
     );
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     const data = await response.json();
-    return data.candidates[0].content.parts[0].text || "No etymology found.";
+
+    // Add proper response structure checking
+    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      return data.candidates[0].content.parts[0].text;
+    }
+    return "No etymology found.";
   } catch (error) {
     console.error("Error getting sidepanel etymology:", error);
-    throw error;
+    return "Error getting etymology.";
   }
 }

@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tabs[0]) {
       const tabId = tabs[0].id;
-      // Send message to background to get the word for this tab
+      // Request the stored word as soon as the panel loads
       chrome.runtime.sendMessage({
         action: "getStoredWord",
         tabId: tabId,
