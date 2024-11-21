@@ -1,67 +1,50 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  const etymologyTextarea = document.getElementById("etymology");
-  const usageTextarea = document.getElementById("usage");
-  const synonymsTextarea = document.getElementById("synonyms");
+  console.log("Sidepanel loaded");
+  const etymologyContent = document.getElementById("etymologyContent");
+  const usageContent = document.getElementById("usageContent");
+  const synonymContent = document.getElementById("synonymContent");
 
-  // Set initial loading states
-  etymologyTextarea.value = "Loading etymology...";
-  usageTextarea.value = "Loading usage examples...";
-  synonymsTextarea.value = "Loading synonyms and antonyms...";
-
-  // Get the current tab to fetch its stored word
-  try {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tabs[0]) {
-      const tabId = tabs[0].id;
-      // Request the stored word as soon as the panel loads
-      chrome.runtime.sendMessage({
-        action: "getStoredWord",
-        tabId: tabId,
-      });
+  // Function to update panel content
+  function updatePanelContent(data) {
+    if (data.success) {
+      etymologyContent.textContent = data.etymology || "No etymology available";
+      usageContent.textContent = data.usage || "No usage examples available";
+      synonymContent.textContent =
+        data.synonyms || "No synonyms/antonyms available";
+    } else {
+      etymologyContent.textContent = "Error loading etymology";
+      usageContent.textContent = "Error loading usage examples";
+      synonymContent.textContent = "Error loading synonyms/antonyms";
     }
-  } catch (error) {
-    console.error("Error getting current tab:", error);
   }
 
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.action === "updateSidePanel" && message.word) {
-      fetchWordData(message.word);
+  // Listen for messages from background script
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log("Sidepanel received message:", message);
+
+    if (message.action === "updateSidePanel") {
+      console.log("inside updateSidePanel");
+      // Request data for the word
+      chrome.runtime.sendMessage(
+        {
+          action: "getSidePanelData",
+          text: message.word,
+        },
+        (response) => {
+          console.log("Received data response:", response);
+          updatePanelContent(response);
+        }
+      );
     }
   });
 
-  async function fetchWordData(word) {
-    try {
-      const response = await chrome.runtime.sendMessage({
-        action: "getSidePanelData",
-        text: word,
+  // Request data for current tab on load
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]) {
+      chrome.runtime.sendMessage({
+        action: "getStoredWord",
+        tabId: tabs[0].id,
       });
-
-      if (response && response.success) {
-        updatePanelContent(response);
-      }
-    } catch (error) {
-      console.error("Error fetching word data:", error);
-      showError();
     }
-  }
-
-  function updatePanelContent(data) {
-    if (data.etymology) {
-      etymologyTextarea.value = data.etymology;
-    }
-
-    if (data.usage) {
-      usageTextarea.value = data.usage;
-    }
-
-    if (data.synonyms) {
-      synonymsTextarea.value = data.synonyms;
-    }
-  }
-
-  function showError() {
-    etymologyTextarea.value = "Error loading etymology";
-    usageTextarea.value = "Error loading usage examples";
-    synonymsTextarea.value = "Error loading synonyms and antonyms";
-  }
+  });
 });

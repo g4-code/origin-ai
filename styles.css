@@ -6,13 +6,15 @@
   border-radius: 4px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   z-index: 10000;
+  min-width: 250px;
+  max-width: 400px;
 }
 
-.word-popup textarea {
-  width: 200px;
-  height: 60px;
+.word-popup .etymology-content {
   margin-bottom: 10px;
-  resize: none;
+  line-height: 1.5;
+  font-size: 14px;
+  color: #333;
 }
 
 .word-popup button {
@@ -28,6 +30,7 @@
 
 .panel-container {
   padding: 16px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .section {
@@ -36,47 +39,75 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .section h2 {
   margin-top: 0;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   font-size: 18px;
   color: #333;
+  border-bottom: 2px solid #4285f4;
+  padding-bottom: 5px;
+}
+
+.content-area {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #444;
+  padding: 10px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  min-height: 50px;
 }
 
 #etymologyContent,
 #usageContent,
 #synonymContent,
 #imagesContent {
-  font-size: 14px;
-  line-height: 1.5;
+  white-space: pre-line;
 }
 
 .container {
   padding: 20px;
-}
-
-.section {
-  margin-bottom: 20px;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 h3 {
   margin: 0 0 10px 0;
   color: #333;
+  font-size: 16px;
 }
 
-textarea {
-  width: 100%;
-  min-height: 100px;
+/* Loading state */
+.loading {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+}
+
+/* Error state */
+.error {
+  color: #d32f2f;
   padding: 10px;
-  border: 1px solid #ccc;
+  background-color: #ffebee;
   border-radius: 4px;
-  resize: vertical;
-  font-family: Arial, sans-serif;
-  margin-bottom: 15px;
+  margin: 10px 0;
 }
 
-textarea:read-only {
-  background-color: #f9f9f9;
+/* Highlight important terms */
+.highlight {
+  color: #1a73e8;
+  font-weight: 500;
+}
+
+/* Lists styling for synonyms/antonyms */
+.word-list {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.word-list li {
+  margin: 5px 0;
 }
