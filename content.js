@@ -9,6 +9,14 @@ document.addEventListener("dblclick", async (e) => {
       currentPopup.remove();
     }
 
+    const popup = createPopup(
+      `${selectedText}\n\nEtymology:\nGetting etymology...`,
+      e.pageX,
+      e.pageY
+    );
+    document.body.appendChild(popup);
+    currentPopup = popup;
+
     try {
       const response = await chrome.runtime.sendMessage({
         action: "getData",
@@ -16,16 +24,13 @@ document.addEventListener("dblclick", async (e) => {
       });
 
       if (response && response.success) {
-        const popup = createPopup(
-          `${response.selectedText}\n\nEtymology:\n${response.etymology}`,
-          e.pageX,
-          e.pageY
-        );
-        document.body.appendChild(popup);
-        currentPopup = popup;
+        const textarea = popup.querySelector("textarea");
+        textarea.value = `${response.selectedText}\n\nEtymology:\n${response.etymology}`;
       }
     } catch (error) {
       console.error("Error sending message:", error);
+      const textarea = popup.querySelector("textarea");
+      textarea.value = `${selectedText}\n\nEtymology:\nError fetching etymology`;
     }
   }
 });
