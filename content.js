@@ -5,15 +5,35 @@ document.addEventListener("dblclick", async (e) => {
   const selectedText = selection.toString().trim();
 
   if (selectedText) {
+    // Remove existing popup if any
     if (currentPopup) {
       currentPopup.remove();
     }
 
-    const popup = createPopup(
-      `${selectedText}\n\nEtymology:\nGetting etymology...`,
-      e.pageX,
-      e.pageY
-    );
+    // Create and position the popup
+    const popup = document.createElement("div");
+    popup.className = "word-popup";
+    popup.style.left = `${e.pageX}px`;
+    popup.style.top = `${e.pageY}px`;
+
+    // Create etymology content div
+    const etymologyDiv = document.createElement("div");
+    etymologyDiv.className = "etymology-content";
+    etymologyDiv.textContent = "Getting etymology...";
+
+    // Create button
+    const button = document.createElement("button");
+    button.textContent = "Open in Side Panel";
+    button.addEventListener("click", () => {
+      chrome.runtime.sendMessage({
+        action: "openSidePanel",
+        word: selectedText,
+      });
+    });
+
+    // Assemble popup
+    popup.appendChild(etymologyDiv);
+    popup.appendChild(button);
     document.body.appendChild(popup);
     currentPopup = popup;
 
@@ -24,13 +44,13 @@ document.addEventListener("dblclick", async (e) => {
       });
 
       if (response && response.success) {
-        const textarea = popup.querySelector("textarea");
-        textarea.value = `${response.selectedText}\n\nEtymology:\n${response.etymology}`;
+        etymologyDiv.textContent = response.etymology;
+      } else {
+        etymologyDiv.textContent = "Error fetching etymology";
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      const textarea = popup.querySelector("textarea");
-      textarea.value = `${selectedText}\n\nEtymology:\nError fetching etymology`;
+      etymologyDiv.textContent = "Error fetching etymology";
     }
   }
 });
@@ -54,32 +74,3 @@ document.addEventListener("click", (e) => {
     });
   }
 });
-
-function createPopup(text, x, y) {
-  const popup = document.createElement("div");
-  popup.className = "word-popup";
-
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.readOnly = true;
-  textarea.style.height = "150px";
-
-  const moreButton = document.createElement("button");
-  moreButton.textContent = "More";
-  moreButton.addEventListener("click", async () => {
-    const word = text.split("\n")[0];
-    chrome.runtime.sendMessage({
-      action: "openSidePanel",
-      word: word,
-    });
-  });
-
-  popup.appendChild(textarea);
-  popup.appendChild(moreButton);
-
-  // Position the popup near the selected text
-  popup.style.left = `${x}px`;
-  popup.style.top = `${y + 20}px`;
-
-  return popup;
-}

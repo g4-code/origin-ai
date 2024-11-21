@@ -86,6 +86,19 @@ async function getEtymologyForSidePanel(word) {
   }
 }
 
+// async function getRelatedImages(word) {
+//   try {
+//     const session = await initAISession();
+//     const prompt = `Provide the etymology of the word "${word}". Keep the response concise and focused on the word's origins and historical development.`;
+
+//     const response = await session.prompt(prompt);
+//     return response || "No etymology found.";
+//   } catch (error) {
+//     console.error("Error getting etymology:", error);
+//     throw error;
+//   }
+// }
+
 // Keep existing message listeners and tab management code...
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log(" in background.js");
@@ -96,23 +109,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     // Open the side panel first
+    // chrome.sidePanel
+    //   .open({ tabId: sender.tab.id })
+    //   .then(() => {
+    //     // Add a small delay to ensure the panel is loaded
+    //     setTimeout(() => {
+    //       console.log("sending message to update side panel");
+    //       chrome.runtime
+    //         .sendMessage({
+    //           action: "updateSidePanel",
+    //           word: message.word,
+    //         })
+    //         .catch((error) => {
+    //           // It's okay if this fails, the panel will request the data when it loads
+    //           console.log(
+    //             "Panel not ready yet, it will request data when loaded"
+    //           );
+    //         });
+    //     }, 1000);
+    //   })
+    //   .catch((error) => {
+    //     console.error("Error opening side panel:", error);
+    //   });
+
+    // Open the side panel first
     chrome.sidePanel
       .open({ tabId: sender.tab.id })
       .then(() => {
         // Add a small delay to ensure the panel is loaded
-        setTimeout(() => {
-          chrome.runtime
-            .sendMessage({
-              action: "updateSidePanel",
-              word: message.word,
-            })
-            .catch((error) => {
-              // It's okay if this fails, the panel will request the data when it loads
-              console.log(
-                "Panel not ready yet, it will request data when loaded"
-              );
-            });
-        }, 500);
+        //setTimeout(() => {
+        console.log("sending message to update side panel");
+        chrome.runtime
+          .sendMessage({
+            action: "updateSidePanel",
+            word: message.word,
+          })
+          .catch((error) => {
+            // It's okay if this fails, the panel will request the data when it loads
+            console.log(
+              "Panel not ready yet, it will request data when loaded"
+            );
+          });
+        //}, 1000);
       })
       .catch((error) => {
         console.error("Error opening side panel:", error);
@@ -165,20 +203,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "getSidePanelData") {
-    // Full data query for sidepanel
-    Promise.all([
-      getEtymologyForSidePanel(message.text),
-      getUsageExamples(message.text),
-      getSynonymsAntonyms(message.text),
-      //getRelatedImages(message.text),
-    ])
-      .then(([etymology, usage, synonyms, images]) => {
+    getEtymologyForSidePanel(message.text)
+      .then((etymology) => {
+        console.log("etymology.....", etymology);
         sendResponse({
           selectedText: message.text,
           etymology: etymology,
-          usage: usage,
-          synonyms: synonyms,
-          images: images,
           success: true,
         });
       })
@@ -189,6 +219,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           success: false,
         });
       });
+
+    // Full data query for sidepanel
+    // Promise.all([
+    //   getEtymologyForSidePanel(message.text),
+    //   getUsageExamples(message.text),
+    //   getSynonymsAntonyms(message.text),
+    //   //getRelatedImages(message.text),
+    // ])
+    //   .then(([etymology, usage, synonyms, images]) => {
+    //     console.log("etymology", etymology);
+    //     console.log("usage", usage);
+    //     console.log("synonyms", synonyms);
+    //     //console.log("images", images);
+    //     sendResponse({
+    //       selectedText: message.text,
+    //       etymology: etymology,
+    //       usage: usage,
+    //       synonyms: synonyms,
+    //       //images: images,
+    //       success: true,
+    //     });
+    //   })
+    //   .catch((error) => {
+    //     sendResponse({
+    //       selectedText: message.text,
+    //       error: "Error fetching data",
+    //       success: false,
+    //     });
+    //   });
     return true;
   }
 
@@ -217,16 +276,16 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   tabWords.delete(tabId);
 });
 
-chrome.tabs.onActivated.addListener((activeInfo) => {
-  const word = tabWords.get(activeInfo.tabId) || "";
+// chrome.tabs.onActivated.addListener((activeInfo) => {
+//   const word = tabWords.get(activeInfo.tabId) || "";
 
-  // Send message only to the side panel if it exists
-  chrome.runtime
-    .sendMessage({
-      action: "updateSidePanel",
-      word: word,
-    })
-    .catch(() => {
-      // Ignore errors when side panel doesn't exist
-    });
-});
+//   // Send message only to the side panel if it exists
+//   chrome.runtime
+//     .sendMessage({
+//       action: "updateSidePanel",
+//       word: word,
+//     })
+//     .catch(() => {
+//       // Ignore errors when side panel doesn't exist
+//     });
+// });
