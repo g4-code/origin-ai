@@ -1,4 +1,8 @@
 let currentPopup = null;
+let currentButton = null;
+
+// Listen for loading state updates - Move this outside the dblclick event
+let messageListener = null;
 
 document.addEventListener("dblclick", async (e) => {
   const selection = window.getSelection();
@@ -24,12 +28,40 @@ document.addEventListener("dblclick", async (e) => {
     // Create button
     const button = document.createElement("button");
     button.textContent = "Open in Side Panel";
+    button.disabled = true; // Initially disabled
+    currentButton = button;
+
     button.addEventListener("click", () => {
+      setButtonLoadingState(button, true);
       chrome.runtime.sendMessage({
         action: "openSidePanel",
         word: selectedText,
       });
     });
+
+    // Remove previous listener if exists
+    if (messageListener) {
+      chrome.runtime.onMessage.removeListener(messageListener);
+    }
+
+    // Create new listener
+    messageListener = (message, sender, sendResponse) => {
+      if (message.action === "updateLoadingStates" && currentButton) {
+        if (message.source === "sidepanel") {
+          const isAnyLoading =
+            message.states &&
+            Object.values(message.states).some((state) => state);
+          setButtonLoadingState(currentButton, isAnyLoading);
+
+          if (message.error) {
+            setButtonLoadingState(currentButton, false);
+          }
+        }
+      }
+    };
+
+    // Add the listener
+    chrome.runtime.onMessage.addListener(messageListener);
 
     // Assemble popup
     popup.appendChild(etymologyDiv);
@@ -45,12 +77,15 @@ document.addEventListener("dblclick", async (e) => {
 
       if (response && response.success) {
         etymologyDiv.textContent = response.etymology;
+        button.disabled = false; // Enable button after successful response
       } else {
         etymologyDiv.textContent = "Error fetching etymology";
+        button.disabled = false; // Enable button even on error to allow retry
       }
     } catch (error) {
       console.error("Error sending message:", error);
       etymologyDiv.textContent = "Error fetching etymology";
+      button.disabled = false; // Enable button on error to allow retry
     }
   }
 });
@@ -58,19 +93,29 @@ document.addEventListener("dblclick", async (e) => {
 // Close popup and side panel when clicking outside
 document.addEventListener("click", (e) => {
   if (currentPopup) {
-    // Only close if we're not clicking inside the popup
     if (!currentPopup.contains(e.target)) {
       currentPopup.remove();
       currentPopup = null;
-      // Send message to close side panel
+      currentButton = null;
+      if (messageListener) {
+        chrome.runtime.onMessage.removeListener(messageListener);
+        messageListener = null;
+      }
       chrome.runtime.sendMessage({
         action: "closeSidePanel",
       });
     }
   } else {
-    // If there's no popup, close side panel anyway
     chrome.runtime.sendMessage({
       action: "closeSidePanel",
     });
   }
 });
+
+// Add this helper function
+function setButtonLoadingState(button, isLoading) {
+  button.disabled = isLoading;
+  button.textContent = isLoading ? "Loading data..." : "Open in Side Panel";
+  button.style.backgroundColor = isLoading ? "#cccccc" : "#4285f4"; // Gray when disabled, blue when enabled
+  button.style.cursor = isLoading ? "not-allowed" : "pointer";
+}

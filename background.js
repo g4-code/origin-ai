@@ -156,64 +156,89 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "getSidePanelData") {
-    // Send initial loading states
-    chrome.runtime.sendMessage({
-      action: "updateLoadingStates",
-      states: {
-        etymology: true,
-        usage: true,
-        synonyms: true,
-      },
-    });
-
-    initAISession().then(async (session) => {
-      try {
-        // Execute requests sequentially
-        const etymology = await getEtymologyForSidePanel(message.text, session);
-        const usage = await getUsageExamplesForSidePanel(message.text, session);
-        const synonyms = await getSynonymsAntonymsForSidePanel(
-          message.text,
-          session
-        );
-
-        // Send completion state
-        chrome.runtime.sendMessage({
+    // Get the active tab to send loading states
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+      if (tabs[0]) {
+        const loadingState = {
           action: "updateLoadingStates",
           states: {
-            etymology: false,
-            usage: false,
-            synonyms: false,
+            etymology: true,
+            usage: true,
+            synonyms: true,
           },
-          data: {
-            etymology,
-            usage,
-            synonyms,
-          },
-        });
+          source: message.source,
+        };
 
-        sendResponse({
-          selectedText: message.text,
-          etymology,
-          usage,
-          synonyms,
-          success: true,
-        });
-      } catch (error) {
-        console.error("Error processing requests:", error);
-        chrome.runtime.sendMessage({
-          action: "updateLoadingStates",
-          states: {
-            etymology: false,
-            usage: false,
-            synonyms: false,
-          },
-          error: "Error fetching data",
-        });
+        // Send loading state to content script
+        chrome.tabs.sendMessage(tabs[0].id, loadingState);
+        // Send loading state to sidepanel
+        chrome.runtime.sendMessage(loadingState);
 
-        sendResponse({
-          selectedText: message.text,
-          error: "Error fetching data",
-          success: false,
+        initAISession().then(async (session) => {
+          try {
+            // Execute requests sequentially
+            const etymology = await getEtymologyForSidePanel(
+              message.text,
+              session
+            );
+            const usage = await getUsageExamplesForSidePanel(
+              message.text,
+              session
+            );
+            const synonyms = await getSynonymsAntonymsForSidePanel(
+              message.text,
+              session
+            );
+
+            const completionState = {
+              action: "updateLoadingStates",
+              states: {
+                etymology: false,
+                usage: false,
+                synonyms: false,
+              },
+              data: {
+                etymology,
+                usage,
+                synonyms,
+              },
+              source: message.source,
+            };
+
+            // Send completion state to both content script and sidepanel
+            chrome.tabs.sendMessage(tabs[0].id, completionState);
+            chrome.runtime.sendMessage(completionState);
+
+            sendResponse({
+              selectedText: message.text,
+              etymology,
+              usage,
+              synonyms,
+              success: true,
+            });
+          } catch (error) {
+            console.error("Error processing requests:", error);
+            const errorState = {
+              action: "updateLoadingStates",
+              states: {
+                etymology: false,
+                usage: false,
+                synonyms: false,
+              },
+              error: "Error fetching data",
+              source: message.source,
+            };
+
+            // Send error state to both content script and sidepanel
+            chrome.tabs.sendMessage(tabs[0].id, errorState);
+            chrome.runtime.sendMessage(errorState);
+
+            sendResponse({
+              selectedText: message.text,
+              error: "Error fetching data",
+              success: false,
+            });
+          }
         });
       }
     });
