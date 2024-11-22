@@ -1,132 +1,129 @@
-.word-popup {
-  position: absolute;
-  background: white;
-  border: 1px solid #ccc;
-  padding: 10px;
-  border-radius: 4px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  z-index: 10000;
-  min-width: 250px;
-  max-width: 400px;
+/* Scope everything to side panel */
+#etymologyExtensionPanel {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter",
+    "Helvetica Neue", Arial, sans-serif;
+  color: #1f1f1f;
+  background: linear-gradient(45deg, #fafafa, #f8fffe);
+  margin: 0;
+  padding: 12px;
+  line-height: 1.4;
 }
 
-.word-popup .etymology-content {
-  margin-bottom: 10px;
-  line-height: 1.5;
+#etymologyExtensionPanel .panel-container {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#etymologyExtensionPanel .section {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  border-left: 3px solid #20b2aa;
+}
+
+#etymologyExtensionPanel .section:hover {
+  box-shadow: 0 2px 8px rgba(32, 178, 170, 0.15);
+  border-left: 3px solid #48d1cc;
+}
+
+#etymologyExtensionPanel .section h2 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c2c2c;
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 6px;
+  position: relative;
+}
+
+#etymologyExtensionPanel .section h2::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, #20b2aa, #48d1cc);
+}
+
+#etymologyExtensionPanel .content-area {
   font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  min-height: 40px;
+}
+
+/* Scoped scrollbar styles */
+#etymologyExtensionPanel ::-webkit-scrollbar {
+  width: 8px;
+}
+
+#etymologyExtensionPanel ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+#etymologyExtensionPanel ::-webkit-scrollbar-thumb {
+  background: #20b2aa;
+  border-radius: 4px;
+}
+
+#etymologyExtensionPanel ::-webkit-scrollbar-thumb:hover {
+  background: #48d1cc;
+}
+
+/* Popup specific styles */
+.etymology-word-popup {
+  position: absolute;
+  background: white;
+  border: 1px solid #e0e0e0;
+  padding: 8px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(32, 178, 170, 0.15);
+  z-index: 10000;
+  min-width: 200px;
+  max-width: 320px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter",
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+.etymology-word-popup .etymology-content {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.5;
   color: #333;
 }
 
-.word-popup button {
-  display: block;
+.etymology-word-popup button {
   width: 100%;
-  padding: 5px;
-  background: #4285f4;
+  padding: 6px;
+  background: #20b2aa;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
 }
 
-.panel-container {
-  padding: 16px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+.etymology-word-popup button:hover {
+  background: #48d1cc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(32, 178, 170, 0.2);
 }
 
-.section {
-  margin-bottom: 20px;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.section h2 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 18px;
-  color: #333;
-  border-bottom: 2px solid #4285f4;
-  padding-bottom: 5px;
-}
-
-.content-area {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #444;
-  padding: 10px;
-  background-color: #fafafa;
-  border-radius: 4px;
-  min-height: 50px;
-}
-
-#etymologyContent,
-#usageContent,
-#synonymContent {
-  white-space: pre-line;
-}
-
-.container {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-h3 {
-  margin: 0 0 10px 0;
-  color: #333;
-  font-size: 16px;
-}
-
-/* Loading state */
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.loading::after {
-  content: "";
-  width: 20px;
-  height: 20px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* Error state */
-.error {
-  color: #d32f2f;
-  padding: 10px;
-  background-color: #ffebee;
-  border-radius: 4px;
-  margin: 10px 0;
-}
-
-/* Highlight important terms */
-.highlight {
-  color: #1a73e8;
-  font-weight: 500;
-}
-
-/* Lists styling for synonyms/antonyms */
-.word-list {
-  margin: 10px 0;
-  padding-left: 20px;
-}
-
-.word-list li {
-  margin: 5px 0;
+.etymology-word-popup button:disabled {
+  background: #cccccc;
+  transform: none;
+  box-shadow: none;
+  cursor: not-allowed;
 }

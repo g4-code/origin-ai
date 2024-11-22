@@ -16,7 +16,7 @@ document.addEventListener("dblclick", async (e) => {
 
     // Create and position the popup
     const popup = document.createElement("div");
-    popup.className = "word-popup";
+    popup.className = "etymology-word-popup";
     popup.style.left = `${e.pageX}px`;
     popup.style.top = `${e.pageY}px`;
 
@@ -116,6 +116,6 @@ document.addEventListener("click", (e) => {
 function setButtonLoadingState(button, isLoading) {
   button.disabled = isLoading;
   button.textContent = isLoading ? "Loading data..." : "Open in Side Panel";
-  button.style.backgroundColor = isLoading ? "#cccccc" : "#4285f4"; // Gray when disabled, blue when enabled
+  button.style.backgroundColor = isLoading ? "#cccccc" : "#48D1CC"; // Gray when disabled, blue when enabled
   button.style.cursor = isLoading ? "not-allowed" : "pointer";
 }
