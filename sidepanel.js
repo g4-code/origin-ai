@@ -27,7 +27,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("Sidepanel received message:", message);
 
-    if (message.action === "updateLoadingStates") {
+    if (
+      message.action === "updateLoadingStates" &&
+      message.source === "sidepanel"
+    ) {
       const sections = {
         etymology: etymologyContent,
         usage: usageContent,
@@ -41,7 +44,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         } else if (message.error) {
           sections[section].textContent = message.error;
         } else if (message.data) {
-          sections[section].innerHTML = marked.parse(message.data[section]);
+          sections[section].innerHTML = DOMPurify.sanitize(
+            marked.parse(message.data[section])
+          );
         }
       });
     } else if (message.action === "updateSidePanel") {
@@ -51,6 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         {
           action: "getSidePanelData",
           text: message.word,
+          source: "sidepanel",
         },
         (response) => {
           console.log("Received data response:", response);
