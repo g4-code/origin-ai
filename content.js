@@ -28,7 +28,7 @@ document.addEventListener("dblclick", async (e) => {
     // Create button
     const button = document.createElement("button");
     button.textContent = "Open in Side Panel";
-    button.disabled = true; // Initially disabled
+    setButtonLoadingState(button, true); // Initially disabled while fetching popup data
     currentButton = button;
 
     button.addEventListener("click", () => {
@@ -77,15 +77,15 @@ document.addEventListener("dblclick", async (e) => {
 
       if (response && response.success) {
         etymologyDiv.textContent = response.etymology;
-        button.disabled = false; // Enable button after successful response
+        setButtonLoadingState(button, false); // Enable button after successful response
       } else {
         etymologyDiv.textContent = "Error fetching etymology";
-        button.disabled = false; // Enable button even on error to allow retry
+        setButtonLoadingState(button, false); // Enable button even on error to allow retry
       }
     } catch (error) {
       console.error("Error sending message:", error);
       etymologyDiv.textContent = "Error fetching etymology";
-      button.disabled = false; // Enable button on error to allow retry
+      setButtonLoadingState(button, false); // Enable button on error to allow retry
     }
   }
 });
