@@ -7,10 +7,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Function to update panel content
   function updatePanelContent(data) {
     if (data.success) {
-      etymologyContent.textContent = data.etymology || "No etymology available";
-      usageContent.textContent = data.usage || "No usage examples available";
-      synonymContent.textContent =
-        data.synonyms || "No synonyms/antonyms available";
+      etymologyContent.innerHTML = DOMPurify.sanitize(
+        marked.parse(data.etymology || "No etymology available")
+      );
+      usageContent.innerHTML = DOMPurify.sanitize(
+        marked.parse(data.usage || "No usage examples available")
+      );
+      synonymContent.innerHTML = DOMPurify.sanitize(
+        marked.parse(data.synonyms || "No synonyms/antonyms available")
+      );
     } else {
       etymologyContent.textContent = "Error loading etymology";
       usageContent.textContent = "Error loading usage examples";
@@ -36,7 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         } else if (message.error) {
           sections[section].textContent = message.error;
         } else if (message.data) {
-          sections[section].textContent = message.data[section];
+          sections[section].innerHTML = marked.parse(message.data[section]);
         }
       });
     } else if (message.action === "updateSidePanel") {
