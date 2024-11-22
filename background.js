@@ -73,36 +73,39 @@ async function getEtymologyForPopup(word) {
   }
 }
 
-async function getEtymologyForSidePanel(word) {
+async function getEtymologyForSidePanel(word, session) {
   try {
-    // First send loading state
-    chrome.runtime.sendMessage({
-      action: "updateSidePanelLoading",
-      loading: true,
-    });
-
-    const session = await initAISession();
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay
     const prompt = `Provide a detailed etymology of "${word}", including its historical development and original language roots.`;
-
     const response = await session.prompt(prompt);
-
-    // Send completion state with data
-    chrome.runtime.sendMessage({
-      action: "updateSidePanelLoading",
-      loading: false,
-      data: response || "No etymology found.",
-    });
-
     return response || "No etymology found.";
   } catch (error) {
     console.error("Error getting sidepanel etymology:", error);
-    // Send error state
-    chrome.runtime.sendMessage({
-      action: "updateSidePanelLoading",
-      loading: false,
-      error: "Error getting etymology.",
-    });
     return "Error getting etymology.";
+  }
+}
+
+async function getUsageExamplesForSidePanel(word, session) {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay
+    const prompt = `Provide 3 clear and concise example sentences using the word "${word}".`;
+    const response = await session.prompt(prompt);
+    return response || "No usage examples found.";
+  } catch (error) {
+    console.error("Error getting usage examples:", error);
+    return "Error getting usage examples.";
+  }
+}
+
+async function getSynonymsAntonymsForSidePanel(word, session) {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay
+    const prompt = `List 5 synonyms and 5 antonyms for the word "${word}". Format as two separate lists.`;
+    const response = await session.prompt(prompt);
+    return response || "No synonyms/antonyms found.";
+  } catch (error) {
+    console.error("Error getting synonyms/antonyms:", error);
+    return "Error getting synonyms/antonyms.";
   }
 }
 
@@ -223,22 +226,67 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "getSidePanelData") {
-    getEtymologyForSidePanel(message.text)
-      .then((etymology) => {
-        // The loading states are now handled inside getEtymologyForSidePanel
+    // Send initial loading states
+    chrome.runtime.sendMessage({
+      action: "updateLoadingStates",
+      states: {
+        etymology: true,
+        usage: true,
+        synonyms: true,
+      },
+    });
+
+    initAISession().then(async (session) => {
+      try {
+        // Execute requests sequentially
+        const etymology = await getEtymologyForSidePanel(message.text, session);
+        const usage = await getUsageExamplesForSidePanel(message.text, session);
+        const synonyms = await getSynonymsAntonymsForSidePanel(
+          message.text,
+          session
+        );
+
+        // Send completion state
+        chrome.runtime.sendMessage({
+          action: "updateLoadingStates",
+          states: {
+            etymology: false,
+            usage: false,
+            synonyms: false,
+          },
+          data: {
+            etymology,
+            usage,
+            synonyms,
+          },
+        });
+
         sendResponse({
           selectedText: message.text,
-          etymology: etymology,
+          etymology,
+          usage,
+          synonyms,
           success: true,
         });
-      })
-      .catch((error) => {
+      } catch (error) {
+        console.error("Error processing requests:", error);
+        chrome.runtime.sendMessage({
+          action: "updateLoadingStates",
+          states: {
+            etymology: false,
+            usage: false,
+            synonyms: false,
+          },
+          error: "Error fetching data",
+        });
+
         sendResponse({
           selectedText: message.text,
           error: "Error fetching data",
           success: false,
         });
-      });
+      }
+    });
     return true;
   }
 

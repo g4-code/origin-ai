@@ -22,17 +22,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("Sidepanel received message:", message);
 
-    if (message.action === "updateSidePanelLoading") {
-      const etymologyContent = document.getElementById("etymologyContent");
+    if (message.action === "updateLoadingStates") {
+      const sections = {
+        etymology: etymologyContent,
+        usage: usageContent,
+        synonyms: synonymContent,
+      };
 
-      if (message.loading) {
-        etymologyContent.innerHTML =
-          '<div class="loading">Loading etymology...</div>';
-      } else if (message.error) {
-        etymologyContent.textContent = message.error;
-      } else if (message.data) {
-        etymologyContent.textContent = message.data;
-      }
+      // Update loading states
+      Object.entries(message.states).forEach(([section, isLoading]) => {
+        if (isLoading) {
+          sections[section].innerHTML = '<div class="loading">Loading...</div>';
+        } else if (message.error) {
+          sections[section].textContent = message.error;
+        } else if (message.data) {
+          sections[section].textContent = message.data[section];
+        }
+      });
     } else if (message.action === "updateSidePanel") {
       console.log("inside updateSidePanel");
       // Request data for the word
