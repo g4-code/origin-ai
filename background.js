@@ -207,6 +207,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             // Send completion state to both content script and sidepanel
             chrome.tabs.sendMessage(tabs[0].id, completionState);
+            console.log("sending completion state to sidepanel...");
             chrome.runtime.sendMessage(completionState);
 
             sendResponse({

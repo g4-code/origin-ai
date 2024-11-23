@@ -26,32 +26,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("Sidepanel received message:", message);
+    const loadingSpinner = document.getElementById("loadingSpinner");
 
-    if (
-      message.action === "updateLoadingStates" &&
-      message.source === "sidepanel"
-    ) {
-      const sections = {
-        etymology: etymologyContent,
-        usage: usageContent,
-        synonyms: synonymContent,
-      };
+    if (message.action === "updateSidePanel") {
+      // Show spinner before sending message
+      if (loadingSpinner) {
+        loadingSpinner.hidden = false;
+        loadingSpinner.style.display = "flex"; // Ensure it's visible
+      }
 
-      // Update loading states
-      Object.entries(message.states).forEach(([section, isLoading]) => {
-        if (isLoading) {
-          sections[section].innerHTML = '<div class="loading">Loading...</div>';
-        } else if (message.error) {
-          sections[section].textContent = message.error;
-        } else if (message.data) {
-          sections[section].innerHTML = DOMPurify.sanitize(
-            marked.parse(message.data[section])
-          );
-        }
-      });
-    } else if (message.action === "updateSidePanel") {
-      console.log("inside updateSidePanel");
-      // Request data for the word
       chrome.runtime.sendMessage(
         {
           action: "getSidePanelData",
@@ -59,8 +42,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           source: "sidepanel",
         },
         (response) => {
-          console.log("Received data response:", response);
-          updatePanelContent(response);
+          console.log("...Received data response:", response);
+          // Ensure spinner exists and hide it
+          if (loadingSpinner) {
+            loadingSpinner.hidden = true;
+            loadingSpinner.style.display = "none";
+          }
+          updatePanelContent(response || { success: false });
         }
       );
     }
