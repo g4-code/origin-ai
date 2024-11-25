@@ -1,7 +1,7 @@
 let currentPopup = null;
 let currentButton = null;
 
-// Listen for loading state updates - Move this outside the dblclick event
+// Create message listener outside dblclick event to avoid memory leaks
 let messageListener = null;
 
 document.addEventListener("dblclick", async (e) => {
@@ -39,12 +39,12 @@ document.addEventListener("dblclick", async (e) => {
       });
     });
 
-    // Remove previous listener if exists
+    // Remove previous listener to prevent duplicates
     if (messageListener) {
       chrome.runtime.onMessage.removeListener(messageListener);
     }
 
-    // Create new listener
+    // Create new listener for loading state updates
     messageListener = (message, sender, sendResponse) => {
       if (message.action === "updateLoadingStates" && currentButton) {
         if (message.source === "sidepanel") {
@@ -112,10 +112,34 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// Add this helper function
+/**
+ * Sets the loading state for the popup button
+ * @param {HTMLButtonElement} button - The button element to update
+ * @param {boolean} isLoading - Whether the button should show loading state
+ */
 function setButtonLoadingState(button, isLoading) {
   button.disabled = isLoading;
   button.textContent = isLoading ? "Loading data..." : "Open in Side Panel";
-  button.style.backgroundColor = isLoading ? "#cccccc" : "#48D1CC"; // Gray when disabled, blue when enabled
+  button.style.backgroundColor = isLoading ? "#cccccc" : "#48D1CC";
   button.style.cursor = isLoading ? "not-allowed" : "pointer";
 }
+
+/**
+ * Message listener for handling loading state updates from the side panel
+ * @param {Object} message - Message object from chrome.runtime
+ * @param {Object} sender - Sender information
+ * @param {Function} sendResponse - Callback function
+ */
+messageListener = (message, sender, sendResponse) => {
+  if (message.action === "updateLoadingStates" && currentButton) {
+    if (message.source === "sidepanel") {
+      const isAnyLoading =
+        message.states && Object.values(message.states).some((state) => state);
+      setButtonLoadingState(currentButton, isAnyLoading);
+
+      if (message.error) {
+        setButtonLoadingState(currentButton, false);
+      }
+    }
+  }
+};
