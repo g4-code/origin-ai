@@ -1,3 +1,5 @@
+"use strict";
+
 let currentPopup = null;
 let currentButton = null;
 

@@ -1,23 +1,59 @@
+// Add strict mode
+"use strict";
 // Store selected words per tab
 const tabWords = new Map();
 let aiSession = null;
 
-// Initialize AI session
-async function initAISession() {
-  if (aiSession) return aiSession;
+// Add data validation utility
+const validateWord = (word) => {
+  if (typeof word !== "string") return false;
+  if (word.length > 100) return false; // Reasonable length limit
+  return /^[\w\s-]+$/i.test(word); // Only allow alphanumeric, spaces, and hyphens
+};
 
-  const capabilities = await chrome.aiOriginTrial.languageModel.capabilities();
-  if (capabilities.available === "no") {
-    throw new Error("AI model not available");
+// Add rate limiting
+const rateLimiter = new Map();
+const RATE_LIMIT = 10; // requests per minute
+const RATE_WINDOW = 60000; // 1 minute in milliseconds
+
+function checkRateLimit(tabId) {
+  const now = Date.now();
+  const userRequests = rateLimiter.get(tabId) || [];
+  const recentRequests = userRequests.filter(
+    (time) => now - time < RATE_WINDOW
+  );
+
+  if (recentRequests.length >= RATE_LIMIT) {
+    return false;
   }
 
-  // Create session with default parameters
-  aiSession = await chrome.aiOriginTrial.languageModel.create({
-    temperature: capabilities.defaultTemperature,
-    topK: capabilities.defaultTopK,
-  });
+  recentRequests.push(now);
+  rateLimiter.set(tabId, recentRequests);
+  return true;
+}
 
-  return aiSession;
+// Initialize AI session
+async function initAISession() {
+  try {
+    if (aiSession) return aiSession;
+
+    const capabilities =
+      await chrome.aiOriginTrial.languageModel.capabilities();
+    if (capabilities.available !== "readily") {
+      throw new Error("AI model not available");
+    }
+
+    // Create session with default parameters
+    aiSession = await chrome.aiOriginTrial.languageModel.create({
+      temperature: capabilities.defaultTemperature,
+      topK: capabilities.defaultTopK,
+    });
+
+    return aiSession;
+  } catch (error) {
+    console.error("Error initializing AI session:", error);
+    throw error;
+  }
 }
 
 // Function to get etymology from built-in AI
@@ -95,6 +131,14 @@ async function getSynonymsAntonymsForSidePanel(word, session) {
 // Keep existing message listeners and tab management code...
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log(" in background.js");
+  // Validate sender
+  if (!sender.id || sender.id !== chrome.runtime.id) return;
+
+  // Add rate limiting
+  if (sender.tab && !checkRateLimit(sender.tab.id)) {
+    sendResponse({ success: false, error: "Rate limit exceeded" });
+    return;
+  }
   if (message.action === "openSidePanel") {
     // Store the word for this tab
     if (sender.tab) {
