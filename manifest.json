@@ -2,13 +2,18 @@
   "manifest_version": 3,
   "name": "Origin ai",
   "version": "1.0",
-  "description": "Select words to analyze their meaning, etymology, usage, and synonyms",
-  "permissions": [
-    "activeTab",
-    "sidePanel",
-    "scripting",
-    "aiLanguageModelOriginTrial"
-  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "description": "Enhance your reading experience by analyzing selected words. Get instant access to meanings, etymology, usage examples, and synonyms to better understand and learn new vocabulary.",
+  "permissions": ["activeTab", "sidePanel", "aiLanguageModelOriginTrial"],
+  "optional_permissions": ["scripting"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
   "action": {
     "default_title": "Word Selection Helper"
   },
@@ -17,7 +22,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["http://*/*", "https://*/*"],
       "css": ["styles.css"],
       "js": ["content.js"]
     }
@@ -31,7 +36,9 @@
   "web_accessible_resources": [
     {
       "resources": ["lib/marked.min.js", "lib/purify.min.js"],
-      "matches": ["<all_urls>"]
+      "matches": ["http://*/*", "https://*/*"],
+      "use_dynamic_url": false
     }
-  ]
+  ],
+  "minimum_chrome_version": "116"
 }
