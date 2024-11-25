@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "test ety built in ai",
+  "name": "Origin ai",
   "version": "1.0",
-  "description": "Select words to analyze them in a popup and side panel",
+  "description": "Select words to analyze their meaning, etymology, usage, and synonyms",
   "permissions": [
     "activeTab",
     "sidePanel",

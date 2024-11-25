@@ -29,10 +29,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const loadingSpinner = document.getElementById("loadingSpinner");
 
     if (message.action === "updateSidePanel") {
-      // Show spinner before sending message
       if (loadingSpinner) {
         loadingSpinner.hidden = false;
-        loadingSpinner.style.display = "flex"; // Ensure it's visible
+        loadingSpinner.style.display = "flex";
       }
 
       chrome.runtime.sendMessage(
@@ -41,13 +40,17 @@ document.addEventListener("DOMContentLoaded", async () => {
           text: message.word,
           source: "sidepanel",
         },
-        (response) => {
+        async (response) => {
           console.log("...Received data response:", response);
-          // Ensure spinner exists and hide it
+
+          // Start view transition for spinner fade-out
           if (loadingSpinner) {
-            loadingSpinner.hidden = true;
-            loadingSpinner.style.display = "none";
+            document.startViewTransition(() => {
+              loadingSpinner.style.display = "none";
+              loadingSpinner.hidden = true;
+            });
           }
+
           updatePanelContent(response || { success: false });
         }
       );

@@ -134,11 +134,12 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 255);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  view-transition-name: loading-spinner;
 }
 
 .spinner {
@@ -157,4 +158,21 @@
   100% {
     transform: rotate(360deg);
   }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@view-transition-old (loading-spinner) {
+  animation: fade-out 0.3s ease-out;
+}
+
+@view-transition-new (loading-spinner) {
+  animation: none;
 }
