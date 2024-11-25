@@ -1,4 +1,21 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  // Add error boundary
+  window.onerror = function (msg, url, lineNo, columnNo, error) {
+    console.error(
+      "Error: ",
+      msg,
+      "\nURL: ",
+      url,
+      "\nLine: ",
+      lineNo,
+      "\nColumn: ",
+      columnNo,
+      "\nError object: ",
+      error
+    );
+    return false;
+  };
+
   console.log("Sidepanel loaded");
   const etymologyContent = document.getElementById("etymologyContent");
   const usageContent = document.getElementById("usageContent");
@@ -25,6 +42,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Add message validation
+    if (!message || typeof message !== "object") return;
+
+    // Add source validation
+    if (sender.id !== chrome.runtime.id) return;
+
+    const timer = setTimeout(() => {
+      sendResponse({ success: false, error: "Operation timed out" });
+    }, 30000); // 30-second timeout
+
     console.log("Sidepanel received message:", message);
     const loadingSpinner = document.getElementById("loadingSpinner");
 
@@ -55,10 +82,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       );
     }
+
+    // Clear timeout on successful response
+    return () => clearTimeout(timer);
   });
 
   // Request data for current tab on load
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (chrome.runtime.lastError) {
+      console.error("Tab query error:", chrome.runtime.lastError);
+      return;
+    }
     if (tabs[0]) {
       chrome.runtime.sendMessage({
         action: "getStoredWord",

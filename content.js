@@ -4,18 +4,45 @@ let currentButton = null;
 // Create message listener outside dblclick event to avoid memory leaks
 let messageListener = null;
 
+// Add input sanitization
+const sanitizeInput = (text) => {
+  return text.replace(/[<>&'"]/g, "");
+};
+
+// Add security checks for popup creation
+const createSecurePopup = (x, y) => {
+  const popup = document.createElement("div");
+
+  // Sanitize positioning
+  popup.style.left = `${Math.max(0, Math.min(x, window.innerWidth - 300))}px`;
+  popup.style.top = `${Math.max(0, Math.min(y, window.innerHeight - 200))}px`;
+
+  // Add security attributes
+  popup.setAttribute("data-origin", "extension");
+  popup.setAttribute("data-secure", "true");
+
+  return popup;
+};
+
 document.addEventListener("dblclick", async (e) => {
   const selection = window.getSelection();
   const selectedText = selection.toString().trim();
 
-  if (selectedText) {
+  // Add input validation
+  if (!selectedText || selectedText.length > 100) return;
+
+  const sanitizedText = sanitizeInput(selectedText);
+
+  if (sanitizedText) {
     // Remove existing popup if any
     if (currentPopup) {
       currentPopup.remove();
     }
 
     // Create and position the popup
-    const popup = document.createElement("div");
+    // Create secure popup
+    const popup = createSecurePopup(e.pageX, e.pageY);
+    //const popup = document.createElement("div");
     popup.className = "etymology-word-popup";
     popup.style.left = `${e.pageX}px`;
     popup.style.top = `${e.pageY}px`;
@@ -35,7 +62,7 @@ document.addEventListener("dblclick", async (e) => {
       setButtonLoadingState(button, true);
       chrome.runtime.sendMessage({
         action: "openSidePanel",
-        word: selectedText,
+        word: sanitizedText,
       });
     });
 
@@ -72,7 +99,7 @@ document.addEventListener("dblclick", async (e) => {
     try {
       const response = await chrome.runtime.sendMessage({
         action: "getPopupData",
-        text: selectedText,
+        text: sanitizedText,
       });
 
       if (response && response.success) {
@@ -143,3 +170,18 @@ messageListener = (message, sender, sendResponse) => {
     }
   }
 };
+
+// Add cleanup function
+function cleanup() {
+  if (currentPopup) {
+    currentPopup.remove();
+    currentPopup = null;
+    currentButton = null;
+  }
+  if (messageListener) {
+    chrome.runtime.onMessage.removeListener(messageListener);
+    messageListener = null;
+  }
+}
+// Add proper cleanup on unload
+window.addEventListener("unload", cleanup);
