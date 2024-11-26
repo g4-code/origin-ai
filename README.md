@@ -13,6 +13,11 @@ A Chrome extension that provides detailed etymology, usage examples, and synonym
 - **AI-Powered Analysis**: Leverages Chrome's AI Language Model for accurate linguistic information
 - **Cross-site Compatibility**: Works on any webpage
 
+## Open trial
+
+Go to: https://developer.chrome.com/origintrials/#/trials
+yo get a trail token as described at : https://developer.chrome.com/docs/web-platform/origin-trials#extensions
+
 ## Installation
 
 1. Clone this repository or download the ZIP
