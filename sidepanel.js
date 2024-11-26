@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const etymologyContent = document.getElementById("etymologyContent");
   const usageContent = document.getElementById("usageContent");
   const synonymContent = document.getElementById("synonymContent");
+  const imagesContent = document.getElementById("imagesContent");
 
   // Function to update panel content
   function updatePanelContent(data) {
@@ -33,10 +34,29 @@ document.addEventListener("DOMContentLoaded", async () => {
       synonymContent.innerHTML = DOMPurify.sanitize(
         marked.parse(data.synonyms || "No synonyms/antonyms available")
       );
+
+      // Handle images content
+      if (data.images && data.images !== "No relevant images found.") {
+        const imageUrls = data.images.split("\n").filter((url) => url.trim());
+        const imageHtml = imageUrls
+          .map(
+            (url) =>
+              `<div class="image-container">
+            <img src="${DOMPurify.sanitize(url)}" alt="Related image" 
+                 onerror="this.style.display='none'" 
+                 loading="lazy" />
+          </div>`
+          )
+          .join("");
+        imagesContent.innerHTML = imageHtml || "No images available";
+      } else {
+        imagesContent.innerHTML = "No related images available";
+      }
     } else {
       etymologyContent.textContent = "Error loading etymology";
       usageContent.textContent = "Error loading usage examples";
       synonymContent.textContent = "Error loading synonyms/antonyms";
+      imagesContent.textContent = "Error loading related images";
     }
   }
 

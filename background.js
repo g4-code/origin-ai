@@ -128,6 +128,27 @@ async function getSynonymsAntonymsForSidePanel(word, session) {
   }
 }
 
+async function getRelatedImagesForSidePanel(word, session) {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay
+    const prompt = `For the word "${word}", suggest 2 relevant, family-friendly image URLs from the internet. Format the response as a simple list with only the URLs, each on a new line. The images should be directly related to the word's meaning or cultural significance.`;
+
+    const response = await session.prompt(prompt);
+
+    // Extract URLs from the response using regex
+    const urls = response.match(/https?:\/\/[^\s]+/g) || [];
+
+    // Take only the first 2 URLs if more are provided
+    return urls.slice(0, 2).join("\n") || "No relevant images found.";
+  } catch (error) {
+    console.error("Error getting related images:", error);
+    if (error.name === "NotSupportedError") {
+      return "Unable to suggest images. The word may contain unsupported characters.";
+    }
+    return "Error getting related images.";
+  }
+}
+
 // Keep existing message listeners and tab management code...
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log(" in background.js");
@@ -209,6 +230,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             etymology: true,
             usage: true,
             synonyms: true,
+            images: true,
           },
           source: message.source,
         };
@@ -233,6 +255,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               message.text,
               session
             );
+            const images = await getRelatedImagesForSidePanel(
+              message.text,
+              session
+            );
 
             const completionState = {
               action: "updateLoadingStates",
@@ -240,11 +266,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 etymology: false,
                 usage: false,
                 synonyms: false,
+                images: false,
               },
               data: {
                 etymology,
                 usage,
                 synonyms,
+                images,
               },
               source: message.source,
             };
@@ -259,6 +287,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               etymology,
               usage,
               synonyms,
+              images,
               success: true,
             });
           } catch (error) {
@@ -269,6 +298,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 etymology: false,
                 usage: false,
                 synonyms: false,
+                images: false,
               },
               error: "Error fetching data",
               source: message.source,
