@@ -10,8 +10,9 @@
   },
   "description": "Enhance your reading experience by analyzing selected words. Get instant access to meanings, etymology, usage examples and synonyms.",
   "permissions": ["activeTab", "sidePanel", "aiLanguageModelOriginTrial"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self'; object-src 'self'; img-src * data: https: http:;"
   },
   "action": {
     "default_title": "Word Selection Helper"

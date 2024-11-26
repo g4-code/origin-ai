@@ -22,6 +22,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   const synonymContent = document.getElementById("synonymContent");
   const imagesContent = document.getElementById("imagesContent");
 
+  // Function to create image element with error handling
+  function createImageElement(url) {
+    const container = document.createElement("div");
+    container.className = "image-container";
+
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.alt = "Related image";
+
+    // Add error handling listener before setting src
+    img.addEventListener("error", () => {
+      container.classList.add("error");
+      container.textContent = "Image failed to load";
+    });
+
+    // Sanitize URL before setting
+    img.src = DOMPurify.sanitize(url);
+
+    container.appendChild(img);
+    return container;
+  }
+
   // Function to update panel content
   function updatePanelContent(data) {
     if (data.success) {
@@ -36,21 +58,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       // Handle images content
+      imagesContent.innerHTML = ""; // Clear existing content
       if (data.images && data.images !== "No relevant images found.") {
         const imageUrls = data.images.split("\n").filter((url) => url.trim());
-        const imageHtml = imageUrls
-          .map(
-            (url) =>
-              `<div class="image-container">
-            <img src="${DOMPurify.sanitize(url)}" alt="Related image" 
-                 onerror="this.style.display='none'" 
-                 loading="lazy" />
-          </div>`
-          )
-          .join("");
-        imagesContent.innerHTML = imageHtml || "No images available";
+
+        if (imageUrls.length > 0) {
+          imageUrls.forEach((url) => {
+            const imageElement = createImageElement(url);
+            imagesContent.appendChild(imageElement);
+          });
+        } else {
+          imagesContent.textContent = "No images available";
+        }
       } else {
-        imagesContent.innerHTML = "No related images available";
+        imagesContent.textContent = "No related images available";
       }
     } else {
       etymologyContent.textContent = "Error loading etymology";
