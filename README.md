@@ -20,10 +20,14 @@ yo get a trail token as described at : https://developer.chrome.com/docs/web-pla
 
 ## Installation
 
-1. Clone this repository or download the ZIP
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the extension directory
+1. Open Chrome and navigate to `chrome://extensions/`
+2. load the extension by clicking "Load unpacked" and selecting the extension directory
+3. grab the extension ID from details page
+4. go to https://developer.chrome.com/origintrials/#/trials
+5. create a trial and add the extension ID and trial token
+6. refresh the extension page and try it out!
+
+You may need to enable developer mode in chrome://extensions/
 
 ## Usage
 
