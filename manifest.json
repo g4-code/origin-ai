@@ -30,9 +30,7 @@
   "background": {
     "service_worker": "background.js"
   },
-  "trial_tokens": [
-    "AtEYBbvXEoJS+QkC+55raFH3CexhmLke5wT/86CJi8AvWUf4JOCNX4EXbs97Wxy8mzELpB977+z8qw9gjJQC/AAAAAB4eyJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8va2lsY2xoZ2NrYmxwZG1iZWZobm5oZ2JhcGpqYWpsbWQiLCJmZWF0dXJlIjoiQUlQcm9tcHRBUElGb3JFeHRlbnNpb24iLCJleHBpcnkiOjE3NjA0ODYzOTl9"
-  ],
+  "trial_tokens": ["your-trial-token-here"],
   "web_accessible_resources": [
     {
       "resources": ["lib/marked.min.js", "lib/purify.min.js"],
