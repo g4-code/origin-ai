@@ -29,7 +29,7 @@
   "background": {
     "service_worker": "background.js"
   },
-  "trial_tokens": ["your-trial-token-here"],
+  "trial_tokens": ["your-trial-token-here-"],
   "web_accessible_resources": [
     {
       "resources": ["lib/marked.min.js", "lib/purify.min.js"],
