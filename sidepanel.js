@@ -89,10 +89,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Request data for current tab on load
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (chrome.runtime.lastError) {
-      console.error("Tab query error:", chrome.runtime.lastError);
-      return;
-    }
     if (tabs[0]) {
       chrome.runtime.sendMessage({
         action: "getStoredWord",
