@@ -10,7 +10,6 @@
   },
   "description": "Enhance your reading experience by analyzing selected words. Get instant access to meanings, etymology, usage examples and synonyms.",
   "permissions": ["activeTab", "sidePanel", "aiLanguageModelOriginTrial"],
-  "optional_permissions": ["scripting"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
