@@ -8,7 +8,7 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "description": "Enhance your reading experience by analyzing selected words. Get instant access to meanings, etymology, usage examples, and synonyms to better understand and learn new vocabulary.",
+  "description": "Enhance your reading experience by analyzing selected words. Get instant access to meanings, etymology, usage examples and synonyms.",
   "permissions": ["activeTab", "sidePanel", "aiLanguageModelOriginTrial"],
   "optional_permissions": ["scripting"],
   "content_security_policy": {
