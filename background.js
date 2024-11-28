@@ -13,24 +13,58 @@ const validateWord = (word) => {
 
 // Add rate limiting
 const rateLimiter = new Map();
-const RATE_LIMIT = 10; // requests per minute
-const RATE_WINDOW = 60000; // 1 minute in milliseconds
+const RATE_LIMIT = 30; // Increase from 20 to 30 requests per minute
+const RATE_WINDOW = 60000; // Keep 1 minute window
+const COOLDOWN_PERIOD = 500; // Reduce from 2000ms to 500ms
 
-function checkRateLimit(tabId) {
+function checkRateLimit(sourceId) {
   const now = Date.now();
-  const userRequests = rateLimiter.get(tabId) || [];
-  const recentRequests = userRequests.filter(
+  const sourceRequests = rateLimiter.get(sourceId) || [];
+
+  // Clean up old requests
+  const recentRequests = sourceRequests.filter(
     (time) => now - time < RATE_WINDOW
   );
 
+  // Reset rate limit if window is fresh
+  if (recentRequests.length === 0) {
+    rateLimiter.set(sourceId, [now]);
+    return true;
+  }
+
+  // Check if we're in cooldown period
+  const lastRequest = recentRequests[recentRequests.length - 1];
+  if (lastRequest && now - lastRequest < COOLDOWN_PERIOD) {
+    return false;
+  }
+
+  // Check rate limit
   if (recentRequests.length >= RATE_LIMIT) {
+    // Clear old requests if we're in a new window
+    if (now - recentRequests[0] >= RATE_WINDOW) {
+      rateLimiter.set(sourceId, [now]);
+      return true;
+    }
     return false;
   }
 
   recentRequests.push(now);
-  rateLimiter.set(tabId, recentRequests);
+  rateLimiter.set(sourceId, recentRequests);
   return true;
 }
+
+// Add rate limiter cleanup
+setInterval(() => {
+  const now = Date.now();
+  for (const [tabId, requests] of rateLimiter.entries()) {
+    const validRequests = requests.filter((time) => now - time < RATE_WINDOW);
+    if (validRequests.length === 0) {
+      rateLimiter.delete(tabId);
+    } else {
+      rateLimiter.set(tabId, validRequests);
+    }
+  }
+}, RATE_WINDOW);
 
 // Initialize AI session
 async function initAISession() {
@@ -56,6 +90,19 @@ async function initAISession() {
   }
 }
 
+// Add session refresh logic
+async function refreshAISession() {
+  if (aiSession) {
+    try {
+      await aiSession.destroy();
+    } catch (error) {
+      console.error("Error destroying AI session:", error);
+    }
+  }
+  aiSession = null;
+  return initAISession();
+}
+
 // Function to get etymology from built-in AI
 async function getEtymology(word) {
   try {
@@ -70,16 +117,35 @@ async function getEtymology(word) {
   }
 }
 
+// Update getEtymologyForPopup function
 async function getEtymologyForPopup(word) {
   try {
     const session = await initAISession();
     const prompt = `Give a very brief etymology of "${word}" in 1-2 sentences.`;
-
     const response = await session.prompt(prompt);
-    return response || "No etymology found.";
+    return {
+      success: true,
+      etymology: response || "No etymology found.",
+    };
   } catch (error) {
     console.error("Error getting popup etymology:", error);
-    throw error;
+    // Try refreshing the session
+    try {
+      await refreshAISession();
+      const session = await initAISession();
+      const prompt = `Give a very brief etymology of "${word}" in 1-2 sentences.`;
+      const response = await session.prompt(prompt);
+      return {
+        success: true,
+        etymology: response || "No etymology found.",
+      };
+    } catch (retryError) {
+      console.error("Retry failed:", retryError);
+      return {
+        success: false,
+        error: "Error fetching etymology",
+      };
+    }
   }
 }
 
@@ -128,17 +194,33 @@ async function getSynonymsAntonymsForSidePanel(word, session) {
   }
 }
 
-// Keep existing message listeners and tab management code...
+// Update message listener to handle all sources
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log(" in background.js");
   // Validate sender
   if (!sender.id || sender.id !== chrome.runtime.id) return;
 
-  // Add rate limiting
-  if (sender.tab && !checkRateLimit(sender.tab.id)) {
+  // Add rate limiting for all sources
+  const sourceId = sender.tab ? sender.tab.id : "popup";
+  if (!checkRateLimit(sourceId)) {
     sendResponse({ success: false, error: "Rate limit exceeded" });
-    return;
+    return true;
   }
+
+  if (message.action === "getPopupData") {
+    getEtymologyForPopup(message.text)
+      .then((result) => {
+        sendResponse(result);
+      })
+      .catch((error) => {
+        console.error("Error in getPopupData:", error);
+        sendResponse({
+          success: false,
+          error: "Error fetching etymology",
+        });
+      });
+    return true;
+  }
+
   if (message.action === "openSidePanel") {
     // Store the word for this tab
     if (sender.tab) {
@@ -177,26 +259,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // Must return false for async operations
     return false;
-  }
-
-  if (message.action === "getPopupData") {
-    // Lightweight query just for popup
-    getEtymologyForPopup(message.text)
-      .then((etymology) => {
-        sendResponse({
-          selectedText: message.text,
-          etymology: etymology,
-          success: true,
-        });
-      })
-      .catch((error) => {
-        sendResponse({
-          selectedText: message.text,
-          etymology: "Error fetching etymology",
-          success: false,
-        });
-      });
-    return true;
   }
 
   if (message.action === "getSidePanelData") {
