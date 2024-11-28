@@ -126,16 +126,43 @@ async function getEtymology(word) {
   }
 }
 
+// Add request tracking for popup requests
+let currentPopupRequest = {
+  controller: null,
+  word: null,
+};
+
 // Update getEtymologyForPopup function
 async function getEtymologyForPopup(word) {
+  // Cancel any existing request
+  if (currentPopupRequest.controller) {
+    console.log(
+      `Cancelling popup request for word: ${currentPopupRequest.word}`
+    );
+    currentPopupRequest.controller.abort();
+  }
+
+  // Create new abort controller
+  const controller = new AbortController();
+  currentPopupRequest = {
+    controller,
+    word,
+  };
+
   const mainPrompt = `Give a very brief etymology of "${word}" in 1-2 sentences.`;
   const fallbackPrompt = `Explain in simple English what the word "${word}" means and where it comes from. Use one short sentence.`;
 
   try {
-    return retryWithFallback(
+    return await retryWithFallback(
       async () => {
         const session = await initAISession();
-        const response = await session.prompt(mainPrompt);
+        // Check if request was cancelled during session init
+        if (controller.signal.aborted) {
+          throw new Error("Request cancelled");
+        }
+        const response = await session.prompt(mainPrompt, {
+          signal: controller.signal,
+        });
         return {
           success: true,
           etymology: response || "No etymology found.",
@@ -143,39 +170,62 @@ async function getEtymologyForPopup(word) {
       },
       async () => {
         const session = await initAISession();
-        const response = await session.prompt(fallbackPrompt);
+        // Check if request was cancelled
+        if (controller.signal.aborted) {
+          throw new Error("Request cancelled");
+        }
+        const response = await session.prompt(fallbackPrompt, {
+          signal: controller.signal,
+        });
         return {
           success: true,
           etymology: response || "No etymology found.",
         };
       }
     ).catch(async (error) => {
-      console.error("Error getting popup etymology:", error);
-      // Keep existing session refresh logic as fallback
-      try {
+      // Don't retry or show errors for cancelled requests
+      if (
+        error.message === "Request cancelled" ||
+        error.name === "AbortError"
+      ) {
+        console.log("Request was cancelled, ignoring error");
+        return {
+          success: false,
+          etymology: "Loading new request...",
+        };
+      }
+
+      // Handle destroyed session
+      if (error.name === "InvalidStateError") {
+        console.log("Session was destroyed, creating new session");
         await refreshAISession();
         const session = await initAISession();
-        const response = await session.prompt(mainPrompt);
+        const response = await session.prompt(mainPrompt, {
+          signal: controller.signal,
+        });
         return {
           success: true,
           etymology: response || "No etymology found.",
         };
-      } catch (retryError) {
-        console.error("Retry failed:", retryError);
-        return {
-          success: false,
-          etymology: "Error fetching etymology. Please try again.",
-          error: error.message || "Error fetching etymology",
-        };
       }
+
+      throw error; // Re-throw other errors
     });
   } catch (error) {
-    console.error("Fatal error in getEtymologyForPopup:", error);
+    console.error("Error in getEtymologyForPopup:", error);
     return {
       success: false,
-      etymology: "Error fetching etymology. Please try again.",
+      etymology:
+        error.message === "Request cancelled"
+          ? "Loading new request..."
+          : "Error fetching etymology. Please try again.",
       error: error.message || "Error fetching etymology",
     };
+  } finally {
+    // Clear request if it hasn't been replaced
+    if (currentPopupRequest.controller === controller) {
+      currentPopupRequest = { controller: null, word: null };
+    }
   }
 }
 
