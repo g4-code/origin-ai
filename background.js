@@ -128,79 +128,126 @@ async function getEtymology(word) {
 
 // Update getEtymologyForPopup function
 async function getEtymologyForPopup(word) {
+  const mainPrompt = `Give a very brief etymology of "${word}" in 1-2 sentences.`;
+  const fallbackPrompt = `Explain in simple English what the word "${word}" means and where it comes from. Use one short sentence.`;
+
   try {
-    const session = await initAISession();
-    const prompt = `Give a very brief etymology of "${word}" in 1-2 sentences.`;
-    const response = await session.prompt(prompt);
-    return {
-      success: true,
-      etymology: response || "No etymology found.",
-    };
+    return retryWithFallback(
+      async () => {
+        const session = await initAISession();
+        const response = await session.prompt(mainPrompt);
+        return {
+          success: true,
+          etymology: response || "No etymology found.",
+        };
+      },
+      async () => {
+        const session = await initAISession();
+        const response = await session.prompt(fallbackPrompt);
+        return {
+          success: true,
+          etymology: response || "No etymology found.",
+        };
+      }
+    ).catch(async (error) => {
+      console.error("Error getting popup etymology:", error);
+      // Keep existing session refresh logic as fallback
+      try {
+        await refreshAISession();
+        const session = await initAISession();
+        const response = await session.prompt(mainPrompt);
+        return {
+          success: true,
+          etymology: response || "No etymology found.",
+        };
+      } catch (retryError) {
+        console.error("Retry failed:", retryError);
+        return {
+          success: false,
+          etymology: "Error fetching etymology. Please try again.",
+          error: error.message || "Error fetching etymology",
+        };
+      }
+    });
   } catch (error) {
-    console.error("Error getting popup etymology:", error);
-    // Try refreshing the session
-    try {
-      await refreshAISession();
-      const session = await initAISession();
-      const prompt = `Give a very brief etymology of "${word}" in 1-2 sentences.`;
-      const response = await session.prompt(prompt);
-      return {
-        success: true,
-        etymology: response || "No etymology found.",
-      };
-    } catch (retryError) {
-      console.error("Retry failed:", retryError);
-      return {
-        success: false,
-        error: "Error fetching etymology",
-      };
-    }
+    console.error("Fatal error in getEtymologyForPopup:", error);
+    return {
+      success: false,
+      etymology: "Error fetching etymology. Please try again.",
+      error: error.message || "Error fetching etymology",
+    };
   }
 }
 
-async function getEtymologyForSidePanel(word, session) {
+// Add retry utility
+const retryWithFallback = async (fn, fallbackFn, maxRetries = 2) => {
   try {
-    await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay
-    const prompt = `Provide a detailed etymology of "${word}" in English, including its historical development and original language roots. If the word comes from a non-English origin, please describe it in English.`;
-    const response = await session.prompt(prompt);
-    return response || "No etymology found.";
+    return await fn();
   } catch (error) {
+    if (error.name === "NotSupportedError" && maxRetries > 0) {
+      console.log("Retrying with English-only fallback...");
+      try {
+        return await fallbackFn();
+      } catch (fallbackError) {
+        if (maxRetries > 1) {
+          return retryWithFallback(fn, fallbackFn, maxRetries - 1);
+        }
+        throw fallbackError;
+      }
+    }
+    throw error;
+  }
+};
+
+// Update the etymology function
+async function getEtymologyForSidePanel(word, session) {
+  const mainPrompt = `Provide a detailed etymology of "${word}" in English, including its historical development and original language roots. If the word comes from a non-English origin, please describe it in English.`;
+  const fallbackPrompt = `Explain in simple English: What is the origin and history of the word "${word}"? Focus only on basic English explanation.`;
+
+  return retryWithFallback(
+    () => session.prompt(mainPrompt),
+    () => session.prompt(fallbackPrompt)
+  ).catch((error) => {
     console.error("Error getting sidepanel etymology:", error);
     if (error.name === "NotSupportedError") {
       return "Unable to process this word. The etymology may contain unsupported language characters.";
     }
     return "Error getting etymology.";
-  }
+  });
 }
 
+// Update the usage examples function
 async function getUsageExamplesForSidePanel(word, session) {
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay
-    const prompt = `Provide 3 clear and concise example sentences in English using the word "${word}".`;
-    const response = await session.prompt(prompt);
-    return response || "No usage examples found.";
-  } catch (error) {
+  const mainPrompt = `Provide 3 clear and concise example sentences in English using the word "${word}".`;
+  const fallbackPrompt = `Write 3 very simple English sentences using the word "${word}". Use basic vocabulary only.`;
+
+  return retryWithFallback(
+    () => session.prompt(mainPrompt),
+    () => session.prompt(fallbackPrompt)
+  ).catch((error) => {
     console.error("Error getting usage examples:", error);
     if (error.name === "NotSupportedError") {
       return "Unable to generate examples. The word may contain unsupported language characters.";
     }
     return "Error getting usage examples.";
-  }
+  });
 }
 
+// Update the synonyms function
 async function getSynonymsAntonymsForSidePanel(word, session) {
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay
-    const prompt = `List 5 synonyms and 5 antonyms in English for the word "${word}". Format as two separate lists.`;
-    const response = await session.prompt(prompt);
-    return response || "No synonyms/antonyms found.";
-  } catch (error) {
+  const mainPrompt = `List 5 synonyms and 5 antonyms in English for the word "${word}". Format as two separate lists.`;
+  const fallbackPrompt = `Give me the most basic English words that mean the same as "${word}" and their opposites. Keep it simple.`;
+
+  return retryWithFallback(
+    () => session.prompt(mainPrompt),
+    () => session.prompt(fallbackPrompt)
+  ).catch((error) => {
     console.error("Error getting synonyms/antonyms:", error);
     if (error.name === "NotSupportedError") {
       return "Unable to provide synonyms/antonyms. The word may contain unsupported language characters.";
     }
     return "Error getting synonyms/antonyms.";
-  }
+  });
 }
 
 // Update message listener to handle all sources
