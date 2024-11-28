@@ -27,6 +27,12 @@ const createSecurePopup = (x, y) => {
 };
 
 document.addEventListener("dblclick", async (e) => {
+  // Prevent double-click inside the popup
+  if (currentPopup && currentPopup.contains(e.target)) {
+    e.stopPropagation();
+    return;
+  }
+
   const selection = window.getSelection();
   const selectedText = selection.toString().trim();
 
@@ -104,17 +110,33 @@ document.addEventListener("dblclick", async (e) => {
         text: sanitizedText,
       });
 
+      // Add check for extension context
+      if (chrome.runtime.lastError) {
+        console.error("Extension context invalid:", chrome.runtime.lastError);
+        etymologyDiv.textContent =
+          "Extension context invalid. Please refresh the page.";
+        setButtonLoadingState(button, false);
+        return;
+      }
+
       if (response && response.success) {
         etymologyDiv.textContent = response.etymology;
-        setButtonLoadingState(button, false); // Enable button after successful response
+        setButtonLoadingState(button, false);
       } else {
-        etymologyDiv.textContent = "Error fetching etymology";
-        setButtonLoadingState(button, false); // Enable button even on error to allow retry
+        etymologyDiv.textContent = response.error || "Error fetching etymology";
+        setButtonLoadingState(button, false);
       }
     } catch (error) {
-      console.error("Error sending message:", error);
-      etymologyDiv.textContent = "Error fetching etymology";
-      setButtonLoadingState(button, false); // Enable button on error to allow retry
+      // Check if the error is due to invalid context
+      if (!chrome.runtime?.id) {
+        console.error("Extension context invalidated");
+        etymologyDiv.textContent =
+          "Extension context invalid. Please refresh the page.";
+      } else {
+        console.error("Error sending message:", error);
+        etymologyDiv.textContent = "Error fetching etymology";
+      }
+      setButtonLoadingState(button, false);
     }
   }
 });
@@ -126,18 +148,27 @@ document.addEventListener("click", (e) => {
       currentPopup.remove();
       currentPopup = null;
       currentButton = null;
-      if (messageListener) {
+
+      // Check if chrome.runtime exists before removing listener
+      if (messageListener && chrome.runtime?.onMessage) {
         chrome.runtime.onMessage.removeListener(messageListener);
         messageListener = null;
       }
+
+      // Check if chrome.runtime exists before sending message
+      if (chrome.runtime?.id) {
+        chrome.runtime.sendMessage({
+          action: "closeSidePanel",
+        });
+      }
+    }
+  } else {
+    // Check if chrome.runtime exists before sending message
+    if (chrome.runtime?.id) {
       chrome.runtime.sendMessage({
         action: "closeSidePanel",
       });
     }
-  } else {
-    chrome.runtime.sendMessage({
-      action: "closeSidePanel",
-    });
   }
 });
 
@@ -180,7 +211,7 @@ function cleanup() {
     currentPopup = null;
     currentButton = null;
   }
-  if (messageListener) {
+  if (messageListener && chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.removeListener(messageListener);
     messageListener = null;
   }
