@@ -27,10 +27,9 @@ const createSecurePopup = (x, y) => {
 };
 
 document.addEventListener("dblclick", async (e) => {
-  // Prevent double-click inside the popup
-  if (currentPopup && currentPopup.contains(e.target)) {
-    e.stopPropagation();
-    return;
+  // Remove existing popup if any
+  if (currentPopup) {
+    currentPopup.remove();
   }
 
   const selection = window.getSelection();
@@ -42,15 +41,8 @@ document.addEventListener("dblclick", async (e) => {
   const sanitizedText = sanitizeInput(selectedText);
 
   if (sanitizedText) {
-    // Remove existing popup if any
-    if (currentPopup) {
-      currentPopup.remove();
-    }
-
-    // Create and position the popup
-    // Create secure popup
+    // Create new popup
     const popup = createSecurePopup(e.pageX, e.pageY);
-    //const popup = document.createElement("div");
     popup.className = "etymology-word-popup";
     popup.style.left = `${e.pageX}px`;
     popup.style.top = `${e.pageY}px`;
