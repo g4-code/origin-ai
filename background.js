@@ -13,9 +13,9 @@ const validateWord = (word) => {
 
 // Add rate limiting
 const rateLimiter = new Map();
-const RATE_LIMIT = 30; // Increase from 20 to 30 requests per minute
+const RATE_LIMIT = 60; // Increase to 60 requests per minute
 const RATE_WINDOW = 60000; // Keep 1 minute window
-const COOLDOWN_PERIOD = 500; // Reduce from 2000ms to 500ms
+const COOLDOWN_PERIOD = 100; // Reduce cooldown to 100ms
 
 function checkRateLimit(sourceId) {
   const now = Date.now();
@@ -26,25 +26,34 @@ function checkRateLimit(sourceId) {
     (time) => now - time < RATE_WINDOW
   );
 
-  // Reset rate limit if window is fresh
+  // Add debugging
+  console.log(`Rate limit check for ${sourceId}:`, {
+    recentRequests: recentRequests.length,
+    limit: RATE_LIMIT,
+    timeSinceLastRequest: recentRequests.length
+      ? now - recentRequests[recentRequests.length - 1]
+      : "none",
+  });
+
+  // Reset if window is fresh
   if (recentRequests.length === 0) {
     rateLimiter.set(sourceId, [now]);
     return true;
   }
 
-  // Check if we're in cooldown period
+  // More lenient cooldown check
   const lastRequest = recentRequests[recentRequests.length - 1];
   if (lastRequest && now - lastRequest < COOLDOWN_PERIOD) {
-    return false;
+    console.log("In cooldown period");
+    return true; // Allow request even during cooldown
   }
 
-  // Check rate limit
   if (recentRequests.length >= RATE_LIMIT) {
-    // Clear old requests if we're in a new window
     if (now - recentRequests[0] >= RATE_WINDOW) {
       rateLimiter.set(sourceId, [now]);
       return true;
     }
+    console.log("Rate limit exceeded");
     return false;
   }
 
@@ -207,15 +216,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "getPopupData") {
+    // Add debugging
+    console.log("Received getPopupData request:", {
+      text: message.text,
+      sourceId: sender.tab ? sender.tab.id : "popup",
+    });
+
+    if (!checkRateLimit(sender.tab ? sender.tab.id : "popup")) {
+      console.log("Rate limit check failed");
+      sendResponse({
+        success: false,
+        etymology: "Please wait a moment before trying again.",
+        error: "Rate limit exceeded",
+      });
+      return true;
+    }
+
     getEtymologyForPopup(message.text)
       .then((result) => {
+        console.log("Etymology result:", result);
         sendResponse(result);
       })
       .catch((error) => {
         console.error("Error in getPopupData:", error);
         sendResponse({
           success: false,
-          error: "Error fetching etymology",
+          etymology: "Error fetching etymology. Please try again.",
+          error: error.message || "Error fetching etymology",
         });
       });
     return true;
