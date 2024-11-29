@@ -227,12 +227,13 @@ async function getEtymologyForSidePanel(word, session, signal) {
     () => session.prompt(mainPrompt, { signal }),
     () => session.prompt(fallbackPrompt, { signal })
   ).catch((error) => {
+    if (error.name === "AbortError") {
+      console.log(`Sidepanel etymology request cancelled for word: ${word}`);
+      return "Request cancelled - new word selected";
+    }
     console.error("Error getting sidepanel etymology:", error);
     if (error.name === "NotSupportedError") {
       return "Unable to process this word. The etymology may contain unsupported language characters.";
-    }
-    if (error.name === "AbortError") {
-      return "Request was cancelled. Please try again.";
     }
     return "Error getting etymology.";
   });
@@ -246,12 +247,15 @@ async function getUsageExamplesForSidePanel(word, session, signal) {
     () => session.prompt(mainPrompt, { signal }),
     () => session.prompt(fallbackPrompt, { signal })
   ).catch((error) => {
+    if (error.name === "AbortError") {
+      console.log(
+        `Sidepanel usage examples request cancelled for word: ${word}`
+      );
+      return "Request cancelled - new word selected";
+    }
     console.error("Error getting usage examples:", error);
     if (error.name === "NotSupportedError") {
       return "Unable to generate examples. The word may contain unsupported language characters.";
-    }
-    if (error.name === "AbortError") {
-      return "Request was cancelled. Please try again.";
     }
     return "Error getting usage examples.";
   });
@@ -265,12 +269,15 @@ async function getSynonymsAntonymsForSidePanel(word, session, signal) {
     () => session.prompt(mainPrompt, { signal }),
     () => session.prompt(fallbackPrompt, { signal })
   ).catch((error) => {
+    if (error.name === "AbortError") {
+      console.log(
+        `Sidepanel synonyms/antonyms request cancelled for word: ${word}`
+      );
+      return "Request cancelled - new word selected";
+    }
     console.error("Error getting synonyms/antonyms:", error);
     if (error.name === "NotSupportedError") {
       return "Unable to provide synonyms/antonyms. The word may contain unsupported language characters.";
-    }
-    if (error.name === "AbortError") {
-      return "Request was cancelled. Please try again.";
     }
     return "Error getting synonyms/antonyms.";
   });
