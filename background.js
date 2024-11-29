@@ -1,17 +1,13 @@
-// Add strict mode
 "use strict";
-// Store selected words per tab
 const tabWords = new Map();
 let aiSession = null;
 
-// Add data validation utility
 const validateWord = (word) => {
   if (typeof word !== "string") return false;
   if (word.length > 100) return false; // Reasonable length limit
   return /^[\w\s-]+$/i.test(word); // Only allow alphanumeric, spaces, and hyphens
 };
 
-// Add rate limiting
 const rateLimiter = new Map();
 const RATE_LIMIT = 60; // Increase to 60 requests per minute
 const RATE_WINDOW = 60000; // Keep 1 minute window
@@ -62,7 +58,6 @@ function checkRateLimit(sourceId) {
   return true;
 }
 
-// Add rate limiter cleanup
 setInterval(() => {
   const now = Date.now();
   for (const [tabId, requests] of rateLimiter.entries()) {
@@ -75,7 +70,6 @@ setInterval(() => {
   }
 }, RATE_WINDOW);
 
-// Initialize AI session
 async function initAISession() {
   try {
     if (aiSession) return aiSession;
@@ -99,7 +93,6 @@ async function initAISession() {
   }
 }
 
-// Add session refresh logic
 async function refreshAISession() {
   if (aiSession) {
     try {
@@ -112,7 +105,6 @@ async function refreshAISession() {
   return initAISession();
 }
 
-// Function to get etymology from built-in AI
 async function getEtymology(word) {
   try {
     const session = await initAISession();
@@ -126,13 +118,11 @@ async function getEtymology(word) {
   }
 }
 
-// Add request tracking for popup requests
 let currentPopupRequest = {
   controller: null,
   word: null,
 };
 
-// Update getEtymologyForPopup function
 async function getEtymologyForPopup(word) {
   // Cancel any existing request
   if (currentPopupRequest.controller) {
@@ -229,7 +219,6 @@ async function getEtymologyForPopup(word) {
   }
 }
 
-// Add retry utility
 const retryWithFallback = async (fn, fallbackFn, maxRetries = 2) => {
   try {
     return await fn();
@@ -249,63 +238,96 @@ const retryWithFallback = async (fn, fallbackFn, maxRetries = 2) => {
   }
 };
 
-// Update the etymology function
-async function getEtymologyForSidePanel(word, session) {
+let currentSidePanelRequest = {
+  controller: null,
+  word: null,
+};
+
+async function getEtymologyForSidePanel(word, session, signal) {
   const mainPrompt = `Provide a detailed etymology of "${word}" in English, including its historical development and original language roots. If the word comes from a non-English origin, please describe it in English.`;
   const fallbackPrompt = `Explain in simple English: What is the origin and history of the word "${word}"? Focus only on basic English explanation.`;
 
   return retryWithFallback(
-    () => session.prompt(mainPrompt),
-    () => session.prompt(fallbackPrompt)
+    () => session.prompt(mainPrompt, { signal }),
+    () => session.prompt(fallbackPrompt, { signal })
   ).catch((error) => {
     console.error("Error getting sidepanel etymology:", error);
     if (error.name === "NotSupportedError") {
       return "Unable to process this word. The etymology may contain unsupported language characters.";
     }
+    if (error.name === "AbortError") {
+      return "Request was cancelled. Please try again.";
+    }
     return "Error getting etymology.";
   });
 }
 
-// Update the usage examples function
-async function getUsageExamplesForSidePanel(word, session) {
+async function getUsageExamplesForSidePanel(word, session, signal) {
   const mainPrompt = `Provide 3 clear and concise example sentences in English using the word "${word}".`;
   const fallbackPrompt = `Write 3 very simple English sentences using the word "${word}". Use basic vocabulary only.`;
 
   return retryWithFallback(
-    () => session.prompt(mainPrompt),
-    () => session.prompt(fallbackPrompt)
+    () => session.prompt(mainPrompt, { signal }),
+    () => session.prompt(fallbackPrompt, { signal })
   ).catch((error) => {
     console.error("Error getting usage examples:", error);
     if (error.name === "NotSupportedError") {
       return "Unable to generate examples. The word may contain unsupported language characters.";
     }
+    if (error.name === "AbortError") {
+      return "Request was cancelled. Please try again.";
+    }
     return "Error getting usage examples.";
   });
 }
 
-// Update the synonyms function
-async function getSynonymsAntonymsForSidePanel(word, session) {
+async function getSynonymsAntonymsForSidePanel(word, session, signal) {
   const mainPrompt = `List 5 synonyms and 5 antonyms in English for the word "${word}". Format as two separate lists.`;
   const fallbackPrompt = `Give me the most basic English words that mean the same as "${word}" and their opposites. Keep it simple.`;
 
   return retryWithFallback(
-    () => session.prompt(mainPrompt),
-    () => session.prompt(fallbackPrompt)
+    () => session.prompt(mainPrompt, { signal }),
+    () => session.prompt(fallbackPrompt, { signal })
   ).catch((error) => {
     console.error("Error getting synonyms/antonyms:", error);
     if (error.name === "NotSupportedError") {
       return "Unable to provide synonyms/antonyms. The word may contain unsupported language characters.";
     }
+    if (error.name === "AbortError") {
+      return "Request was cancelled. Please try again.";
+    }
     return "Error getting synonyms/antonyms.";
   });
 }
 
-// Update message listener to handle all sources
+let sidePanelPorts = new Map();
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === "sidepanel") {
+    const tabId = port.sender.tab?.id;
+    if (tabId) {
+      sidePanelPorts.set(tabId, port);
+      port.onDisconnect.addListener(() => {
+        sidePanelPorts.delete(tabId);
+      });
+    }
+  }
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Validate sender
   if (!sender.id || sender.id !== chrome.runtime.id) return;
 
-  // Add rate limiting for all sources
+  // Skip rate limiting for cleanup actions
+  if (message.action === "closeSidePanel") {
+    // Clear the stored word for this tab
+    if (sender.tab) {
+      tabWords.delete(sender.tab.id);
+    }
+    return false;
+  }
+
+  // Add rate limiting for all other actions
   const sourceId = sender.tab ? sender.tab.id : "popup";
   if (!checkRateLimit(sourceId)) {
     sendResponse({ success: false, error: "Rate limit exceeded" });
@@ -375,18 +397,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.action === "closeSidePanel") {
-    // Clear the stored word for this tab
-    if (sender.tab) {
-      tabWords.delete(sender.tab.id);
+  if (message.action === "getSidePanelData") {
+    // Cancel any existing request
+    if (currentSidePanelRequest.controller) {
+      currentSidePanelRequest.controller.abort();
     }
 
-    // Must return false for async operations
-    return false;
-  }
+    // Create new abort controller
+    const controller = new AbortController();
+    currentSidePanelRequest = {
+      controller,
+      word: message.text,
+    };
 
-  if (message.action === "getSidePanelData") {
-    // Get the active tab to send loading states
     chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       if (tabs[0]) {
         const loadingState = {
@@ -399,78 +422,108 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           source: message.source,
         };
 
-        // Send loading state to content script
-        chrome.tabs.sendMessage(tabs[0].id, loadingState);
-        // Send loading state to sidepanel
-        chrome.runtime.sendMessage(loadingState);
+        try {
+          // Send loading state to content script
+          await chrome.tabs.sendMessage(tabs[0].id, loadingState).catch(() => {
+            console.log("Content script not available, skipping loading state");
+          });
 
-        initAISession().then(async (session) => {
-          try {
-            // Execute requests sequentially
-            const etymology = await getEtymologyForSidePanel(
-              message.text,
-              session
-            );
-            const usage = await getUsageExamplesForSidePanel(
-              message.text,
-              session
-            );
-            const synonyms = await getSynonymsAntonymsForSidePanel(
-              message.text,
-              session
-            );
+          // Send loading state to sidepanel
+          chrome.runtime.sendMessage(loadingState);
 
-            const completionState = {
-              action: "updateLoadingStates",
-              states: {
-                etymology: false,
-                usage: false,
-                synonyms: false,
-              },
-              data: {
-                etymology,
-                usage,
-                synonyms,
-              },
-              source: message.source,
-            };
+          const session = await initAISession();
 
-            // Send completion state to both content script and sidepanel
-            chrome.tabs.sendMessage(tabs[0].id, completionState);
-            console.log("sending completion state to sidepanel...");
-            chrome.runtime.sendMessage(completionState);
+          // Execute requests sequentially
+          const etymology = await getEtymologyForSidePanel(
+            message.text,
+            session,
+            controller.signal
+          );
+          const usage = await getUsageExamplesForSidePanel(
+            message.text,
+            session,
+            controller.signal
+          );
+          const synonyms = await getSynonymsAntonymsForSidePanel(
+            message.text,
+            session,
+            controller.signal
+          );
 
-            sendResponse({
-              selectedText: message.text,
+          const completionState = {
+            action: "updateLoadingStates",
+            states: {
+              etymology: false,
+              usage: false,
+              synonyms: false,
+            },
+            data: {
               etymology,
               usage,
               synonyms,
-              success: true,
+            },
+            source: message.source,
+          };
+
+          // Send completion state to content script if it's still available
+          await chrome.tabs
+            .sendMessage(tabs[0].id, completionState)
+            .catch(() => {
+              console.log(
+                "Content script not available, skipping completion state"
+              );
             });
-          } catch (error) {
-            console.error("Error processing requests:", error);
-            const errorState = {
-              action: "updateLoadingStates",
-              states: {
-                etymology: false,
-                usage: false,
-                synonyms: false,
-              },
-              error: "Error fetching data",
-              source: message.source,
-            };
 
-            // Send error state to both content script and sidepanel
-            chrome.tabs.sendMessage(tabs[0].id, errorState);
-            chrome.runtime.sendMessage(errorState);
-
-            sendResponse({
-              selectedText: message.text,
-              error: "Error fetching data",
-              success: false,
+          // Check if side panel is still connected before sending
+          const port = sidePanelPorts.get(tabs[0].id);
+          if (port) {
+            console.log("sending completion state to sidepanel...");
+            chrome.runtime.sendMessage(completionState).catch(() => {
+              console.log("Side panel disconnected, skipping update");
             });
           }
-        });
+
+          sendResponse({
+            selectedText: message.text,
+            etymology,
+            usage,
+            synonyms,
+            success: true,
+          });
+        } catch (error) {
+          console.error("Error processing requests:", error);
+          const errorState = {
+            action: "updateLoadingStates",
+            states: {
+              etymology: false,
+              usage: false,
+              synonyms: false,
+            },
+            error: "Error fetching data",
+            source: message.source,
+          };
+
+          // Send error state if content script is still available
+          await chrome.tabs.sendMessage(tabs[0].id, errorState).catch(() => {
+            console.log("Content script not available, skipping error state");
+          });
+
+          // Send error to side panel
+          chrome.runtime.sendMessage(errorState).catch(() => {
+            console.log("Side panel disconnected, skipping error update");
+          });
+
+          sendResponse({
+            selectedText: message.text,
+            error: "Error fetching data",
+            success: false,
+          });
+        } finally {
+          // Clear request if it hasn't been replaced
+          if (currentSidePanelRequest.controller === controller) {
+            currentSidePanelRequest = { controller: null, word: null };
+          }
+        }
       }
     });
     return true;
@@ -488,7 +541,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Clean up AI session when extension is unloaded
 chrome.runtime.onSuspend.addListener(() => {
   if (aiSession) {
     aiSession.destroy();
@@ -496,7 +548,6 @@ chrome.runtime.onSuspend.addListener(() => {
   }
 });
 
-// Keep existing tab management code...
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabWords.delete(tabId);
 });
