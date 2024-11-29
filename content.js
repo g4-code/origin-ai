@@ -141,13 +141,13 @@ document.addEventListener("click", (e) => {
       currentPopup = null;
       currentButton = null;
 
-      // Check if chrome.runtime exists before removing listener
+      // We remove the listener here
       if (messageListener && chrome.runtime?.onMessage) {
         chrome.runtime.onMessage.removeListener(messageListener);
         messageListener = null;
       }
 
-      // Check if chrome.runtime exists before sending message
+      // And send close message
       if (chrome.runtime?.id) {
         chrome.runtime.sendMessage({
           action: "closeSidePanel",

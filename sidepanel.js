@@ -96,4 +96,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
   });
+
+  // Add connection to background
+  chrome.runtime.connect({ name: "sidepanel" });
 });
