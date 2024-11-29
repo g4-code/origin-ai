@@ -124,6 +124,12 @@
   font-size: 14px;
   line-height: 1.5;
   color: #333;
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.etymology-word-popup .etymology-content.updating {
+  opacity: 0;
 }
 
 .etymology-word-popup button {

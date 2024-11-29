@@ -50,18 +50,30 @@ function fetchEtymology(word, etymologyContent, button) {
     (response) => {
       if (chrome.runtime.lastError) {
         console.error(chrome.runtime.lastError);
-        etymologyContent.textContent = "Error fetching etymology";
+        etymologyContent.classList.add("updating");
+        setTimeout(() => {
+          etymologyContent.textContent = "Error fetching etymology";
+          etymologyContent.classList.remove("updating");
+        }, 200);
         setButtonLoadingState(button, false);
         return;
       }
 
       if (!response || !response.success) {
-        etymologyContent.textContent = "Error fetching etymology";
+        etymologyContent.classList.add("updating");
+        setTimeout(() => {
+          etymologyContent.textContent = "Error fetching etymology";
+          etymologyContent.classList.remove("updating");
+        }, 200);
         setButtonLoadingState(button, false);
         return;
       }
 
-      etymologyContent.textContent = response.etymology;
+      etymologyContent.classList.add("updating");
+      setTimeout(() => {
+        etymologyContent.textContent = response.etymology;
+        etymologyContent.classList.remove("updating");
+      }, 200);
       setButtonLoadingState(button, false);
     }
   );
