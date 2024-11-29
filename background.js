@@ -123,6 +123,21 @@ let currentPopupRequest = {
   word: null,
 };
 
+let currentSidePanelRequest = {
+  controller: null,
+  word: null,
+};
+
+function cancelSidePanelRequest() {
+  if (currentSidePanelRequest.controller) {
+    console.log(
+      `Cancelling sidepanel request for word: ${currentSidePanelRequest.word}`
+    );
+    currentSidePanelRequest.controller.abort();
+    currentSidePanelRequest = { controller: null, word: null };
+  }
+}
+
 async function getEtymologyForPopup(word) {
   // Cancel any existing request
   if (currentPopupRequest.controller) {
@@ -172,50 +187,16 @@ async function getEtymologyForPopup(word) {
           etymology: response || "No etymology found.",
         };
       }
-    ).catch(async (error) => {
-      // Don't retry or show errors for cancelled requests
-      if (
-        error.message === "Request cancelled" ||
-        error.name === "AbortError"
-      ) {
-        console.log("Request was cancelled, ignoring error");
-        return {
-          success: false,
-          etymology: "Loading new request...",
-        };
-      }
-
-      // Handle destroyed session
-      if (error.name === "InvalidStateError") {
-        console.log("Session was destroyed, creating new session");
-        await refreshAISession();
-        const session = await initAISession();
-        const response = await session.prompt(mainPrompt, {
-          signal: controller.signal,
-        });
-        return {
-          success: true,
-          etymology: response || "No etymology found.",
-        };
-      }
-
-      throw error; // Re-throw other errors
-    });
+    );
   } catch (error) {
-    console.error("Error in getEtymologyForPopup:", error);
-    return {
-      success: false,
-      etymology:
-        error.message === "Request cancelled"
-          ? "Loading new request..."
-          : "Error fetching etymology. Please try again.",
-      error: error.message || "Error fetching etymology",
-    };
-  } finally {
-    // Clear request if it hasn't been replaced
-    if (currentPopupRequest.controller === controller) {
-      currentPopupRequest = { controller: null, word: null };
+    if (error.message === "Request cancelled" || error.name === "AbortError") {
+      console.log("Request was cancelled, ignoring error");
+      return {
+        success: false,
+        etymology: "Loading new request...",
+      };
     }
+    throw error;
   }
 }
 
@@ -236,11 +217,6 @@ const retryWithFallback = async (fn, fallbackFn, maxRetries = 2) => {
     }
     throw error;
   }
-};
-
-let currentSidePanelRequest = {
-  controller: null,
-  word: null,
 };
 
 async function getEtymologyForSidePanel(word, session, signal) {
@@ -318,30 +294,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Validate sender
   if (!sender.id || sender.id !== chrome.runtime.id) return;
 
-  // Skip rate limiting for cleanup actions
-  if (message.action === "closeSidePanel") {
-    // Clear the stored word for this tab
-    if (sender.tab) {
-      tabWords.delete(sender.tab.id);
-    }
-    return false;
-  }
-
-  // Add rate limiting for all other actions
-  const sourceId = sender.tab ? sender.tab.id : "popup";
-  if (!checkRateLimit(sourceId)) {
-    sendResponse({ success: false, error: "Rate limit exceeded" });
-    return true;
-  }
-
   if (message.action === "getPopupData") {
-    // Add debugging
-    console.log("Received getPopupData request:", {
-      text: message.text,
-      sourceId: sender.tab ? sender.tab.id : "popup",
-    });
+    // Cancel any in-flight sidepanel request when new word is selected
+    cancelSidePanelRequest();
 
-    if (!checkRateLimit(sender.tab ? sender.tab.id : "popup")) {
+    // Skip rate limit check for popup requests when cancelling previous request
+    const skipRateLimit = currentPopupRequest.controller !== null;
+
+    const sourceId = sender.tab ? sender.tab.id : "popup";
+    if (!skipRateLimit && !checkRateLimit(sourceId)) {
       console.log("Rate limit check failed");
       sendResponse({
         success: false,
