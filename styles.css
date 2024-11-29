@@ -164,6 +164,8 @@
   align-items: center;
   z-index: 1000;
   view-transition-name: loading-spinner;
+  opacity: 0;
+  animation: spinnerFadeIn 0.2s ease-in forwards;
 }
 
 .spinner {
@@ -199,4 +201,13 @@
 
 @view-transition-new (loading-spinner) {
   animation: none;
+}
+
+@keyframes spinnerFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
