@@ -26,7 +26,48 @@ const createSecurePopup = (x, y) => {
   return popup;
 };
 
-document.addEventListener("dblclick", async (e) => {
+// Add at the top with other state variables
+let currentEtymologyRequest = null;
+
+function fetchEtymology(word, etymologyContent, button) {
+  // Cancel any existing request
+  if (currentEtymologyRequest) {
+    chrome.runtime.sendMessage({
+      action: "cancelRequest",
+      requestId: currentEtymologyRequest,
+    });
+  }
+
+  // Generate new request ID
+  currentEtymologyRequest = Date.now().toString();
+
+  chrome.runtime.sendMessage(
+    {
+      action: "getPopupData",
+      text: word,
+      requestId: currentEtymologyRequest,
+    },
+    (response) => {
+      if (chrome.runtime.lastError) {
+        console.error(chrome.runtime.lastError);
+        etymologyContent.textContent = "Error fetching etymology";
+        setButtonLoadingState(button, false);
+        return;
+      }
+
+      if (!response || !response.success) {
+        etymologyContent.textContent = "Error fetching etymology";
+        setButtonLoadingState(button, false);
+        return;
+      }
+
+      etymologyContent.textContent = response.etymology;
+      setButtonLoadingState(button, false);
+    }
+  );
+}
+
+document.addEventListener("dblclick", (e) => {
   // Remove existing popup if any
   if (currentPopup) {
     currentPopup.remove();
@@ -96,40 +137,8 @@ document.addEventListener("dblclick", async (e) => {
     document.body.appendChild(popup);
     currentPopup = popup;
 
-    try {
-      const response = await chrome.runtime.sendMessage({
-        action: "getPopupData",
-        text: sanitizedText,
-      });
-
-      // Add check for extension context
-      if (chrome.runtime.lastError) {
-        console.error("Extension context invalid:", chrome.runtime.lastError);
-        etymologyDiv.textContent =
-          "Extension context invalid. Please refresh the page.";
-        setButtonLoadingState(button, false);
-        return;
-      }
-
-      if (response && response.success) {
-        etymologyDiv.textContent = response.etymology;
-        setButtonLoadingState(button, false);
-      } else {
-        etymologyDiv.textContent = response.error || "Error fetching etymology";
-        setButtonLoadingState(button, false);
-      }
-    } catch (error) {
-      // Check if the error is due to invalid context
-      if (!chrome.runtime?.id) {
-        console.error("Extension context invalidated");
-        etymologyDiv.textContent =
-          "Extension context invalid. Please refresh the page.";
-      } else {
-        console.error("Error sending message:", error);
-        etymologyDiv.textContent = "Error fetching etymology";
-      }
-      setButtonLoadingState(button, false);
-    }
+    const etymologyContent = popup.querySelector(".etymology-content");
+    fetchEtymology(selectedText, etymologyContent, button);
   }
 });
 
