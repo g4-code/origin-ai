@@ -146,22 +146,29 @@ document.addEventListener("dblclick", (e) => {
 document.addEventListener("click", (e) => {
   if (currentPopup) {
     if (!currentPopup.contains(e.target)) {
-      currentPopup.remove();
-      currentPopup = null;
-      currentButton = null;
+      currentPopup.classList.add("closing");
+      currentPopup.addEventListener(
+        "animationend",
+        () => {
+          currentPopup.remove();
+          currentPopup = null;
+          currentButton = null;
 
-      // We remove the listener here
-      if (messageListener && chrome.runtime?.onMessage) {
-        chrome.runtime.onMessage.removeListener(messageListener);
-        messageListener = null;
-      }
+          // We remove the listener here
+          if (messageListener && chrome.runtime?.onMessage) {
+            chrome.runtime.onMessage.removeListener(messageListener);
+            messageListener = null;
+          }
 
-      // And send close message
-      if (chrome.runtime?.id) {
-        chrome.runtime.sendMessage({
-          action: "closeSidePanel",
-        });
-      }
+          // And send close message
+          if (chrome.runtime?.id) {
+            chrome.runtime.sendMessage({
+              action: "closeSidePanel",
+            });
+          }
+        },
+        { once: true }
+      );
     }
   } else {
     // Check if chrome.runtime exists before sending message
