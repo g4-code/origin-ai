@@ -235,3 +235,13 @@
   font-size: 14px;
   text-align: center;
 }
+
+.etymology-content {
+  transition: color 0.2s ease;
+  margin-bottom: 8px;
+}
+
+.etymology-content.error {
+  color: #ff4444;
+  font-weight: 500;
+}

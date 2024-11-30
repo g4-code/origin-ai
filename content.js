@@ -29,54 +29,74 @@ const createSecurePopup = (x, y) => {
 // Add at the top with other state variables
 let currentEtymologyRequest = null;
 
-function fetchEtymology(word, etymologyContent, button) {
-  // Cancel any existing request
-  if (currentEtymologyRequest) {
-    chrome.runtime.sendMessage({
-      action: "cancelRequest",
-      requestId: currentEtymologyRequest,
-    });
+// Add error handling helper function at the top with other functions
+const handleExtensionError = (etymologyContent, button) => {
+  etymologyContent.classList.add("updating");
+  setTimeout(() => {
+    etymologyContent.textContent =
+      "Please reload your browser to continue using the extension";
+    etymologyContent.style.color = "#ff4444";
+    etymologyContent.classList.remove("updating");
+  }, 200);
+  if (button) {
+    setButtonLoadingState(button, false);
+    button.style.display = "none"; // Hide the button when extension is invalid
   }
+};
 
-  // Generate new request ID
-  currentEtymologyRequest = Date.now().toString();
-
-  chrome.runtime.sendMessage(
-    {
-      action: "getPopupData",
-      text: word,
-      requestId: currentEtymologyRequest,
-    },
-    (response) => {
-      if (chrome.runtime.lastError) {
-        console.error(chrome.runtime.lastError);
-        etymologyContent.classList.add("updating");
-        setTimeout(() => {
-          etymologyContent.textContent = "Error fetching etymology";
-          etymologyContent.classList.remove("updating");
-        }, 200);
-        setButtonLoadingState(button, false);
-        return;
-      }
-
-      if (!response || !response.success) {
-        etymologyContent.classList.add("updating");
-        setTimeout(() => {
-          etymologyContent.textContent = "Error fetching etymology";
-          etymologyContent.classList.remove("updating");
-        }, 200);
-        setButtonLoadingState(button, false);
-        return;
-      }
-
-      etymologyContent.classList.add("updating");
-      setTimeout(() => {
-        etymologyContent.textContent = response.etymology;
-        etymologyContent.classList.remove("updating");
-      }, 200);
-      setButtonLoadingState(button, false);
+// Update the fetchEtymology function to handle extension invalidation
+function fetchEtymology(word, etymologyContent, button) {
+  try {
+    // Cancel any existing request
+    if (currentEtymologyRequest) {
+      chrome.runtime.sendMessage({
+        action: "cancelRequest",
+        requestId: currentEtymologyRequest,
+      });
     }
-  );
+
+    // Generate new request ID
+    currentEtymologyRequest = Date.now().toString();
+
+    chrome.runtime.sendMessage(
+      {
+        action: "getPopupData",
+        text: word,
+        requestId: currentEtymologyRequest,
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(chrome.runtime.lastError);
+          handleExtensionError(etymologyContent, button);
+          return;
+        }
+
+        if (!response || !response.success) {
+          etymologyContent.classList.add("updating");
+          setTimeout(() => {
+            etymologyContent.textContent = "Error fetching etymology";
+            etymologyContent.classList.remove("updating");
+          }, 200);
+          setButtonLoadingState(button, false);
+          return;
+        }
+
+        etymologyContent.classList.add("updating");
+        setTimeout(() => {
+          etymologyContent.textContent = response.etymology;
+          etymologyContent.classList.remove("updating");
+        }, 200);
+        setButtonLoadingState(button, false);
+      }
+    );
+  } catch (error) {
+    if (error.message.includes("Extension context invalidated")) {
+      handleExtensionError(etymologyContent, button);
+    } else {
+      console.error("Unexpected error:", error);
+      etymologyContent.textContent = "An unexpected error occurred";
+    }
+  }
 }
 
 document.addEventListener("dblclick", (e) => {
