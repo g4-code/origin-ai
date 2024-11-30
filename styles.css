@@ -217,3 +217,21 @@
     opacity: 1;
   }
 }
+
+/* Add these styles for the cancelled state */
+.panel-container.cancelled {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.panel-container.cancelled .section {
+  display: none;
+}
+
+.cancelled-message {
+  color: #666;
+  font-size: 14px;
+  text-align: center;
+}

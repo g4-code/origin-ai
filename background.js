@@ -229,7 +229,10 @@ async function getEtymologyForSidePanel(word, session, signal) {
   ).catch((error) => {
     if (error.name === "AbortError") {
       console.log(`Sidepanel etymology request cancelled for word: ${word}`);
-      return "Request cancelled - new word selected";
+      return {
+        cancelled: true,
+        message: "New word selected...",
+      };
     }
     console.error("Error getting sidepanel etymology:", error);
     if (error.name === "NotSupportedError") {
@@ -251,7 +254,10 @@ async function getUsageExamplesForSidePanel(word, session, signal) {
       console.log(
         `Sidepanel usage examples request cancelled for word: ${word}`
       );
-      return "Request cancelled - new word selected";
+      return {
+        cancelled: true,
+        message: "New word selected...",
+      };
     }
     console.error("Error getting usage examples:", error);
     if (error.name === "NotSupportedError") {
@@ -273,7 +279,10 @@ async function getSynonymsAntonymsForSidePanel(word, session, signal) {
       console.log(
         `Sidepanel synonyms/antonyms request cancelled for word: ${word}`
       );
-      return "Request cancelled - new word selected";
+      return {
+        cancelled: true,
+        message: "New word selected...",
+      };
     }
     console.error("Error getting synonyms/antonyms:", error);
     if (error.name === "NotSupportedError") {

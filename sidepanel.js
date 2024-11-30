@@ -23,15 +23,67 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Function to update panel content
   function updatePanelContent(data) {
+    const panelContainer = document.querySelector(".panel-container");
+
     if (data.success) {
+      // Check if any of the responses indicate cancellation
+      const isCancelled = [data.etymology, data.usage, data.synonyms].some(
+        (response) => response?.cancelled
+      );
+
+      if (isCancelled) {
+        // Clear existing content
+        panelContainer.innerHTML = `
+          <div class="cancelled-message">
+            New word selected...
+          </div>
+        `;
+        panelContainer.classList.add("cancelled");
+        return;
+      }
+
+      // Remove cancelled class if it exists
+      panelContainer.classList.remove("cancelled");
+
+      // Restore original sections if they were removed
+      if (!document.querySelector(".section")) {
+        panelContainer.innerHTML = `
+          <div class="section">
+            <h2>Etymology</h2>
+            <div id="etymologyContent" class="content-area"></div>
+          </div>
+          <div class="section">
+            <h2>Usage Examples</h2>
+            <div id="usageContent" class="content-area"></div>
+          </div>
+          <div class="section">
+            <h2>Synonyms & Antonyms</h2>
+            <div id="synonymContent" class="content-area"></div>
+          </div>
+        `;
+      }
+
+      // Get fresh references to content areas
+      const etymologyContent = document.getElementById("etymologyContent");
+      const usageContent = document.getElementById("usageContent");
+      const synonymContent = document.getElementById("synonymContent");
+
       etymologyContent.innerHTML = DOMPurify.sanitize(
-        marked.parse(data.etymology || "No etymology available")
+        marked.parse(
+          data.etymology?.message || data.etymology || "No etymology available"
+        )
       );
       usageContent.innerHTML = DOMPurify.sanitize(
-        marked.parse(data.usage || "No usage examples available")
+        marked.parse(
+          data.usage?.message || data.usage || "No usage examples available"
+        )
       );
       synonymContent.innerHTML = DOMPurify.sanitize(
-        marked.parse(data.synonyms || "No synonyms/antonyms available")
+        marked.parse(
+          data.synonyms?.message ||
+            data.synonyms ||
+            "No synonyms/antonyms available"
+        )
       );
     } else {
       etymologyContent.textContent = "Error loading etymology";
