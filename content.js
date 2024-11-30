@@ -148,10 +148,16 @@ document.addEventListener("dblclick", (e) => {
     messageListener = (message, sender, sendResponse) => {
       if (message.action === "updateLoadingStates" && currentButton) {
         if (message.source === "sidepanel") {
+          // Add explicit handling for cancellation
+          if (message.cancelled) {
+            setButtonLoadingState(currentButton, false);
+            return;
+          }
+
           const isAnyLoading =
             message.states &&
             Object.values(message.states).some((state) => state);
-          setButtonLoadingState(currentButton, isAnyLoading);
+          setButtonLoadingState(currentButton, isLoading);
 
           if (message.error) {
             setButtonLoadingState(currentButton, false);
@@ -233,9 +239,15 @@ function setButtonLoadingState(button, isLoading) {
 messageListener = (message, sender, sendResponse) => {
   if (message.action === "updateLoadingStates" && currentButton) {
     if (message.source === "sidepanel") {
+      // Add explicit handling for cancellation
+      if (message.cancelled) {
+        setButtonLoadingState(currentButton, false);
+        return;
+      }
+
       const isAnyLoading =
         message.states && Object.values(message.states).some((state) => state);
-      setButtonLoadingState(currentButton, isAnyLoading);
+      setButtonLoadingState(currentButton, isLoading);
 
       if (message.error) {
         setButtonLoadingState(currentButton, false);
