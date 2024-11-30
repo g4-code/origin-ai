@@ -15,9 +15,14 @@ const sanitizeInput = (text) => {
 const createSecurePopup = (x, y) => {
   const popup = document.createElement("div");
 
-  // Sanitize positioning
-  popup.style.left = `${Math.max(0, Math.min(x, window.innerWidth - 300))}px`;
-  popup.style.top = `${Math.max(0, Math.min(y, window.innerHeight - 200))}px`;
+  // Set fixed positioning for bottom-left corner
+  popup.style.position = "fixed"; // Changed from absolute
+  popup.style.bottom = "20px"; // Distance from bottom
+  popup.style.left = "20px"; // Distance from left
+
+  // Remove the dynamic x,y positioning since we're using fixed bottom-left
+  // popup.style.left = `${Math.max(0, Math.min(x, window.innerWidth - 300))}px`;
+  // popup.style.top = `${Math.max(0, Math.min(y, window.innerHeight - 200))}px`;
 
   // Add security attributes
   popup.setAttribute("data-origin", "extension");
@@ -114,11 +119,9 @@ document.addEventListener("dblclick", (e) => {
   const sanitizedText = sanitizeInput(selectedText);
 
   if (sanitizedText) {
-    // Create new popup
-    const popup = createSecurePopup(e.pageX, e.pageY);
+    // Create new popup - no need to pass mouse coordinates anymore
+    const popup = createSecurePopup();
     popup.className = "etymology-word-popup";
-    popup.style.left = `${e.pageX}px`;
-    popup.style.top = `${e.pageY}px`;
 
     // Create etymology content div
     const etymologyDiv = document.createElement("div");

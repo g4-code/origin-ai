@@ -82,7 +82,7 @@
 
 /* Popup specific styles */
 .etymology-word-popup {
-  position: absolute;
+  position: fixed;
   background: white;
   border: 1px solid #e0e0e0;
   padding: 8px;
@@ -91,10 +91,14 @@
   z-index: 10000;
   min-width: 200px;
   max-width: 320px;
+  bottom: 20px;
+  left: 20px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter",
     "Helvetica Neue", Arial, sans-serif;
   opacity: 0;
   animation: fadeIn 0.2s ease-in forwards;
+  transform: translateZ(0);
+  will-change: opacity;
 }
 
 @keyframes fadeIn {
