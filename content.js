@@ -180,11 +180,11 @@ document.addEventListener("dblclick", (e) => {
 
           // Log when all data is loaded
           if (!isAnyLoading && message.data) {
-            console.log("✅ Side panel data fully loaded 172:", {
-              etymology: message.data.etymology,
-              usage: message.data.usage,
-              synonyms: message.data.synonyms,
-            });
+            // console.log("✅ Side panel data fully loaded 172:", {
+            //   etymology: message.data.etymology,
+            //   usage: message.data.usage,
+            //   synonyms: message.data.synonyms,
+            // });
             //my fix
             if (message.data.etymology.cancelled === true) {
               setButtonLoadingState(currentButton, true);
@@ -196,7 +196,7 @@ document.addEventListener("dblclick", (e) => {
           }
 
           if (message.error) {
-            console.log("❌ Error loading side panel data:", message.error);
+            // console.log("❌ Error loading side panel data:", message.error);
             setButtonLoadingState(currentButton, false);
           }
         }
@@ -204,12 +204,12 @@ document.addEventListener("dblclick", (e) => {
 
       // Handle initial side panel open status
       if (message.action === "sidePanelOpenStatus") {
-        console.log(
-          "🔄 Side panel opening status:",
-          message.success ? "Success" : "Failed"
-        );
+        // console.log(
+        //   "🔄 Side panel opening status:",
+        //   message.success ? "Success" : "Failed"
+        // );
         if (!message.success) {
-          console.error("Side panel failed to open:", message.error);
+          // console.error("Side panel failed to open:", message.error);
           setButtonLoadingState(currentButton, false);
         }
       }
@@ -273,7 +273,7 @@ document.addEventListener("click", (e) => {
  * @param {boolean} isLoading - Whether the button should show loading state
  */
 function setButtonLoadingState(button, isLoading) {
-  console.log("setButtonLoadingState............", isLoading);
+  // console.log("setButtonLoadingState............", isLoading);
   button.disabled = isLoading;
   button.textContent = isLoading ? "Loading data..." : "Open in Side Panel";
   button.style.backgroundColor = isLoading ? "#cccccc" : "#48D1CC";

@@ -1,22 +1,22 @@
 document.addEventListener("DOMContentLoaded", async () => {
   // Add error boundary
   window.onerror = function (msg, url, lineNo, columnNo, error) {
-    console.error(
-      "Error: ",
-      msg,
-      "\nURL: ",
-      url,
-      "\nLine: ",
-      lineNo,
-      "\nColumn: ",
-      columnNo,
-      "\nError object: ",
-      error
-    );
+    // console.error(
+    //   "Error: ",
+    //   msg,
+    //   "\nURL: ",
+    //   url,
+    //   "\nLine: ",
+    //   lineNo,
+    //   "\nColumn: ",
+    //   columnNo,
+    //   "\nError object: ",
+    //   error
+    // );
     return false;
   };
 
-  console.log("Sidepanel loaded");
+  // console.log("Sidepanel loaded");
   const etymologyContent = document.getElementById("etymologyContent");
   const usageContent = document.getElementById("usageContent");
   const synonymContent = document.getElementById("synonymContent");
