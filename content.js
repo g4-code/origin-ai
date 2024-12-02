@@ -126,6 +126,18 @@ document.addEventListener("dblclick", (e) => {
     const popup = createSecurePopup();
     popup.className = "etymology-word-popup";
 
+    // Calculate translation values from click position to final position
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+    const finalX = 20; // left position
+    const finalY = window.innerHeight - 20; // bottom position
+    const translateX = finalX - clickX;
+    const translateY = finalY - clickY;
+
+    // Set CSS custom properties for the animation
+    popup.style.setProperty("--origin-x", `${-translateX}px`);
+    popup.style.setProperty("--origin-y", `${-translateY}px`);
+
     // Create etymology content div
     const etymologyDiv = document.createElement("div");
     etymologyDiv.className = "etymology-content";
@@ -282,3 +294,22 @@ function cleanup() {
 }
 // Add proper cleanup on unload
 window.addEventListener("unload", cleanup);
+
+function showPopup(event) {
+  const popup = document.createElement("div");
+  popup.className = "etymology-word-popup";
+
+  // Calculate translation values from click position to final position
+  const clickX = event.clientX;
+  const clickY = event.clientY;
+  const finalX = 20; // left position
+  const finalY = window.innerHeight - 20; // bottom position
+  const translateX = finalX - clickX;
+  const translateY = finalY - clickY;
+
+  // Set CSS custom properties for the animation
+  popup.style.setProperty("--origin-x", `${-translateX}px`);
+  popup.style.setProperty("--origin-y", `${-translateY}px`);
+
+  // ... rest of popup creation code ...
+}
