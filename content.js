@@ -52,6 +52,7 @@ const handleExtensionError = (etymologyContent, button) => {
 // Update the fetchEtymology function to handle extension invalidation
 function fetchEtymology(word, etymologyContent, button) {
   try {
+    //console.log("tf............", currentEtymologyRequest);
     // Cancel any existing request
     if (currentEtymologyRequest) {
       chrome.runtime.sendMessage({
@@ -82,6 +83,7 @@ function fetchEtymology(word, etymologyContent, button) {
             etymologyContent.textContent = "Error fetching etymology";
             etymologyContent.classList.remove("updating");
           }, 200);
+          console.log("tf............86", currentEtymologyRequest);
           setButtonLoadingState(button, false);
           return;
         }
@@ -91,6 +93,7 @@ function fetchEtymology(word, etymologyContent, button) {
           etymologyContent.textContent = response.etymology;
           etymologyContent.classList.remove("updating");
         }, 200);
+        console.log("tf............96", currentEtymologyRequest);
         setButtonLoadingState(button, false);
       }
     );
@@ -131,11 +134,13 @@ document.addEventListener("dblclick", (e) => {
     // Create button
     const button = document.createElement("button");
     button.textContent = "Open in Side Panel";
+    console.log("init disable............", button);
     setButtonLoadingState(button, true); // Initially disabled while fetching popup data
     currentButton = button;
 
     button.addEventListener("click", () => {
       setButtonLoadingState(button, true);
+      console.log("Sending openSidePanel request...");
       chrome.runtime.sendMessage({
         action: "openSidePanel",
         word: sanitizedText,
@@ -160,11 +165,34 @@ document.addEventListener("dblclick", (e) => {
           const isAnyLoading =
             message.states &&
             Object.values(message.states).some((state) => state);
-          setButtonLoadingState(currentButton, isLoading);
+
+          // Log when all data is loaded
+          if (!isAnyLoading && message.data) {
+            console.log("✅ Side panel data fully loaded 172:", {
+              etymology: message.data.etymology,
+              usage: message.data.usage,
+              synonyms: message.data.synonyms,
+            });
+          } else {
+            setButtonLoadingState(currentButton, isAnyLoading);
+          }
 
           if (message.error) {
+            console.log("❌ Error loading side panel data:", message.error);
             setButtonLoadingState(currentButton, false);
           }
+        }
+      }
+
+      // Handle initial side panel open status
+      if (message.action === "sidePanelOpenStatus") {
+        console.log(
+          "🔄 Side panel opening status:",
+          message.success ? "Success" : "Failed"
+        );
+        if (!message.success) {
+          console.error("Side panel failed to open:", message.error);
+          setButtonLoadingState(currentButton, false);
         }
       }
     };
@@ -227,37 +255,12 @@ document.addEventListener("click", (e) => {
  * @param {boolean} isLoading - Whether the button should show loading state
  */
 function setButtonLoadingState(button, isLoading) {
+  console.log("setButtonLoadingState............", isLoading);
   button.disabled = isLoading;
   button.textContent = isLoading ? "Loading data..." : "Open in Side Panel";
   button.style.backgroundColor = isLoading ? "#cccccc" : "#48D1CC";
   button.style.cursor = isLoading ? "not-allowed" : "pointer";
 }
-
-/**
- * Message listener for handling loading state updates from the side panel
- * @param {Object} message - Message object from chrome.runtime
- * @param {Object} sender - Sender information
- * @param {Function} sendResponse - Callback function
- */
-messageListener = (message, sender, sendResponse) => {
-  if (message.action === "updateLoadingStates" && currentButton) {
-    if (message.source === "sidepanel") {
-      // Add explicit handling for cancellation
-      if (message.cancelled) {
-        setButtonLoadingState(currentButton, false);
-        return;
-      }
-
-      const isAnyLoading =
-        message.states && Object.values(message.states).some((state) => state);
-      setButtonLoadingState(currentButton, isLoading);
-
-      if (message.error) {
-        setButtonLoadingState(currentButton, false);
-      }
-    }
-  }
-};
 
 // Add cleanup function
 function cleanup() {

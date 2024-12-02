@@ -356,7 +356,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(() => {
         // Add a small delay to ensure the panel is loaded
         console.log("sending message to update side panel");
-        chrome.runtime
+        return chrome.runtime
           .sendMessage({
             action: "updateSidePanel",
             word: message.word,
@@ -367,8 +367,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             );
           });
       })
+      .then(() => {
+        // Send success response back to content script
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: "sidePanelOpenStatus",
+          success: true,
+        });
+      })
       .catch((error) => {
         console.error("Error opening side panel:", error);
+        // Send error response back to content script
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: "sidePanelOpenStatus",
+          success: false,
+          error: error.message,
+        });
       });
 
     return true;
