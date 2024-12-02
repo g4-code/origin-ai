@@ -173,6 +173,12 @@ document.addEventListener("dblclick", (e) => {
               usage: message.data.usage,
               synonyms: message.data.synonyms,
             });
+            //my fix
+            if (message.data.etymology.cancelled === true) {
+              setButtonLoadingState(currentButton, true);
+            } else {
+              setButtonLoadingState(currentButton, false);
+            }
           } else {
             setButtonLoadingState(currentButton, isAnyLoading);
           }
