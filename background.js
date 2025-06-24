@@ -1,6 +1,5 @@
 "use strict";
 const tabWords = new Map();
-let aiSession = null;
 
 const validateWord = (word) => {
   if (typeof word !== "string") return false;
@@ -70,52 +69,222 @@ setInterval(() => {
   }
 }, RATE_WINDOW);
 
-async function initAISession() {
-  try {
-    if (aiSession) return aiSession;
+// --- Prompt API Migration: Use LanguageModel instead of chrome.aiOriginTrial.languageModel ---
+// Remove aiSession and related session logic
+let session = null; // Prompt API session
 
-    const capabilities =
-      await chrome.aiOriginTrial.languageModel.capabilities();
-    if (capabilities.available !== "readily") {
-      throw new Error("AI model not available");
-    }
-
-    // Create session with default parameters
-    aiSession = await chrome.aiOriginTrial.languageModel.create({
-      temperature: capabilities.defaultTemperature,
-      topK: capabilities.defaultTopK,
-    });
-
-    return aiSession;
-  } catch (error) {
-    console.error("Error initializing AI session:", error);
-    throw error;
+// --- Prompt API Migration: Helper to create or reuse a session ---
+async function getPromptSession(params) {
+  if (!session) {
+    // Create a new session with the Prompt API
+    session = await LanguageModel.create(params);
   }
+  return session;
 }
 
-async function refreshAISession() {
-  if (aiSession) {
-    try {
-      await aiSession.destroy();
-    } catch (error) {
-      console.error("Error destroying AI session:", error);
-    }
+// --- Prompt API Migration: Reset session (for error recovery or param changes) ---
+async function resetPromptSession() {
+  if (session) {
+    await session.destroy();
   }
-  aiSession = null;
-  return initAISession();
+  session = null;
 }
 
+// --- Prompt API Migration: Replace getEtymology with Prompt API ---
 async function getEtymology(word) {
   try {
-    const session = await initAISession();
+    const params = {
+      initialPrompts: [
+        {
+          role: "system",
+          content: "You are a helpful and friendly assistant.",
+        },
+      ],
+    };
+    const promptSession = await getPromptSession(params);
     const prompt = `Provide the etymology of the word "${word}". Keep the response concise and focused on the word's origins and historical development.`;
-
-    const response = await session.prompt(prompt);
+    const response = await promptSession.prompt(prompt);
     return response || "No etymology found.";
   } catch (error) {
-    console.error("Error getting etymology:", error);
+    console.error("Error getting etymology (Prompt API):", error);
+    await resetPromptSession(); // Reset session on error
     throw error;
   }
+}
+
+// --- Prompt API Migration: Replace getEtymologyForPopup with Prompt API ---
+async function getEtymologyForPopup(word) {
+  if (currentPopupRequest.controller) {
+    currentPopupRequest.controller.abort();
+  }
+  const controller = new AbortController();
+  currentPopupRequest = { controller, word };
+  const mainPrompt = `Give a very brief etymology of "${word}" in 1-2 sentences.`;
+  const fallbackPrompt = `Explain in simple English what the word "${word}" means and where it comes from. Use one short sentence.`;
+  try {
+    return await retryWithFallback(
+      async () => {
+        const params = {
+          initialPrompts: [
+            {
+              role: "system",
+              content: "You are a helpful and friendly assistant.",
+            },
+          ],
+        };
+        const promptSession = await getPromptSession(params);
+        if (controller.signal.aborted) throw new Error("Request cancelled");
+        const response = await promptSession.prompt(mainPrompt);
+        return { success: true, etymology: response || "No etymology found." };
+      },
+      async () => {
+        const params = {
+          initialPrompts: [
+            {
+              role: "system",
+              content: "You are a helpful and friendly assistant.",
+            },
+          ],
+        };
+        const promptSession = await getPromptSession(params);
+        if (controller.signal.aborted) throw new Error("Request cancelled");
+        const response = await promptSession.prompt(fallbackPrompt);
+        return { success: true, etymology: response || "No etymology found." };
+      }
+    );
+  } catch (error) {
+    if (error.message === "Request cancelled" || error.name === "AbortError") {
+      return { success: false, etymology: "Loading new request..." };
+    }
+    await resetPromptSession(); // Reset session on error
+    throw error;
+  }
+}
+
+// --- Prompt API Migration: Replace getEtymologyForSidePanel with Prompt API ---
+async function getEtymologyForSidePanel(word, _session, signal) {
+  const mainPrompt = `Provide a detailed etymology of "${word}" in English, including its historical development and original language roots. If the word comes from a non-English origin, please describe it in English.`;
+  const fallbackPrompt = `Explain in simple English: What is the origin and history of the word "${word}"? Focus only on basic English explanation.`;
+  return retryWithFallback(
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
+      };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(mainPrompt);
+      return response || "No etymology found.";
+    },
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
+      };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(fallbackPrompt);
+      return response || "No etymology found.";
+    }
+  ).catch(async (error) => {
+    if (error.name === "AbortError") {
+      return { cancelled: true, message: "New word selected..." };
+    }
+    await resetPromptSession(); // Reset session on error
+    return "Error getting etymology.";
+  });
+}
+
+// --- Prompt API Migration: Replace getUsageExamplesForSidePanel with Prompt API ---
+async function getUsageExamplesForSidePanel(word, _session, signal) {
+  const mainPrompt = `Provide 3 clear and concise example sentences in English using the word "${word}".`;
+  const fallbackPrompt = `Write 3 very simple English sentences using the word "${word}". Use basic vocabulary only.`;
+  return retryWithFallback(
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
+      };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(mainPrompt);
+      return response || "No examples found.";
+    },
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
+      };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(fallbackPrompt);
+      return response || "No examples found.";
+    }
+  ).catch(async (error) => {
+    if (error.name === "AbortError") {
+      return { cancelled: true, message: "New word selected..." };
+    }
+    await resetPromptSession(); // Reset session on error
+    return "Error getting usage examples.";
+  });
+}
+
+// --- Prompt API Migration: Replace getSynonymsAntonymsForSidePanel with Prompt API ---
+async function getSynonymsAntonymsForSidePanel(word, _session, signal) {
+  const mainPrompt = `List 5 synonyms and 5 antonyms in English for the word "${word}". Format as two separate lists.`;
+  const fallbackPrompt = `Give me the most basic English words that mean the same as "${word}" and their opposites. Keep it simple.`;
+  return retryWithFallback(
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
+      };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(mainPrompt);
+      return response || "No synonyms/antonyms found.";
+    },
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
+      };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(fallbackPrompt);
+      return response || "No synonyms/antonyms found.";
+    }
+  ).catch(async (error) => {
+    if (error.name === "AbortError") {
+      return { cancelled: true, message: "New word selected..." };
+    }
+    await resetPromptSession(); // Reset session on error
+    return "Error getting synonyms/antonyms.";
+  });
 }
 
 let currentPopupRequest = {
@@ -160,28 +329,40 @@ async function getEtymologyForPopup(word) {
   try {
     return await retryWithFallback(
       async () => {
-        const session = await initAISession();
+        const params = {
+          initialPrompts: [
+            {
+              role: "system",
+              content: "You are a helpful and friendly assistant.",
+            },
+          ],
+        };
+        const promptSession = await getPromptSession(params);
         // Check if request was cancelled during session init
         if (controller.signal.aborted) {
           throw new Error("Request cancelled");
         }
-        const response = await session.prompt(mainPrompt, {
-          signal: controller.signal,
-        });
+        const response = await promptSession.prompt(mainPrompt);
         return {
           success: true,
           etymology: response || "No etymology found.",
         };
       },
       async () => {
-        const session = await initAISession();
+        const params = {
+          initialPrompts: [
+            {
+              role: "system",
+              content: "You are a helpful and friendly assistant.",
+            },
+          ],
+        };
+        const promptSession = await getPromptSession(params);
         // Check if request was cancelled
         if (controller.signal.aborted) {
           throw new Error("Request cancelled");
         }
-        const response = await session.prompt(fallbackPrompt, {
-          signal: controller.signal,
-        });
+        const response = await promptSession.prompt(fallbackPrompt);
         return {
           success: true,
           etymology: response || "No etymology found.",
@@ -196,6 +377,7 @@ async function getEtymologyForPopup(word) {
         etymology: "Loading new request...",
       };
     }
+    await resetPromptSession(); // Reset session on error
     throw error;
   }
 }
@@ -219,75 +401,128 @@ const retryWithFallback = async (fn, fallbackFn, maxRetries = 2) => {
   }
 };
 
-async function getEtymologyForSidePanel(word, session, signal) {
+async function getEtymologyForSidePanel(word, _session, signal) {
   const mainPrompt = `Provide a detailed etymology of "${word}" in English, including its historical development and original language roots. If the word comes from a non-English origin, please describe it in English.`;
   const fallbackPrompt = `Explain in simple English: What is the origin and history of the word "${word}"? Focus only on basic English explanation.`;
 
   return retryWithFallback(
-    () => session.prompt(mainPrompt, { signal }),
-    () => session.prompt(fallbackPrompt, { signal })
-  ).catch((error) => {
-    if (error.name === "AbortError") {
-      console.log(`Sidepanel etymology request cancelled for word: ${word}`);
-      return {
-        cancelled: true,
-        message: "New word selected...",
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
       };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(mainPrompt);
+      return response || "No etymology found.";
+    },
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
+      };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(fallbackPrompt);
+      return response || "No etymology found.";
     }
-    console.error("Error getting sidepanel etymology:", error);
-    if (error.name === "NotSupportedError") {
-      return "Unable to process this word. The etymology may contain unsupported language characters.";
+  ).catch(async (error) => {
+    if (error.name === "AbortError") {
+      return { cancelled: true, message: "New word selected..." };
     }
+    await resetPromptSession(); // Reset session on error
     return "Error getting etymology.";
   });
 }
 
-async function getUsageExamplesForSidePanel(word, session, signal) {
+async function getUsageExamplesForSidePanel(word, _session, signal) {
   const mainPrompt = `Provide 3 clear and concise example sentences in English using the word "${word}".`;
   const fallbackPrompt = `Write 3 very simple English sentences using the word "${word}". Use basic vocabulary only.`;
 
   return retryWithFallback(
-    () => session.prompt(mainPrompt, { signal }),
-    () => session.prompt(fallbackPrompt, { signal })
-  ).catch((error) => {
-    if (error.name === "AbortError") {
-      console.log(
-        `Sidepanel usage examples request cancelled for word: ${word}`
-      );
-      return {
-        cancelled: true,
-        message: "New word selected...",
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
       };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(mainPrompt);
+      return response || "No examples found.";
+    },
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
+      };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(fallbackPrompt);
+      return response || "No examples found.";
     }
-    console.error("Error getting usage examples:", error);
-    if (error.name === "NotSupportedError") {
-      return "Unable to generate examples. The word may contain unsupported language characters.";
+  ).catch(async (error) => {
+    if (error.name === "AbortError") {
+      return { cancelled: true, message: "New word selected..." };
     }
+    await resetPromptSession(); // Reset session on error
     return "Error getting usage examples.";
   });
 }
 
-async function getSynonymsAntonymsForSidePanel(word, session, signal) {
+async function getSynonymsAntonymsForSidePanel(word, _session, signal) {
   const mainPrompt = `List 5 synonyms and 5 antonyms in English for the word "${word}". Format as two separate lists.`;
   const fallbackPrompt = `Give me the most basic English words that mean the same as "${word}" and their opposites. Keep it simple.`;
 
   return retryWithFallback(
-    () => session.prompt(mainPrompt, { signal }),
-    () => session.prompt(fallbackPrompt, { signal })
-  ).catch((error) => {
-    if (error.name === "AbortError") {
-      console.log(
-        `Sidepanel synonyms/antonyms request cancelled for word: ${word}`
-      );
-      return {
-        cancelled: true,
-        message: "New word selected...",
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
       };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(mainPrompt);
+      return response || "No synonyms/antonyms found.";
+    },
+    async () => {
+      const params = {
+        initialPrompts: [
+          {
+            role: "system",
+            content: "You are a helpful and friendly assistant.",
+          },
+        ],
+      };
+      const promptSession = await getPromptSession(params);
+      if (signal?.aborted) throw new Error("Request cancelled");
+      const response = await promptSession.prompt(fallbackPrompt);
+      return response || "No synonyms/antonyms found.";
     }
-    console.error("Error getting synonyms/antonyms:", error);
-    if (error.name === "NotSupportedError") {
-      return "Unable to provide synonyms/antonyms. The word may contain unsupported language characters.";
+  ).catch(async (error) => {
+    if (error.name === "AbortError") {
+      return { cancelled: true, message: "New word selected..." };
     }
+    await resetPromptSession(); // Reset session on error
     return "Error getting synonyms/antonyms.";
   });
 }
