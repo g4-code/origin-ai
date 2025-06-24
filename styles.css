@@ -99,6 +99,7 @@
   transform-origin: top left;
   animation: popupOpen 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards;
   will-change: transform, opacity;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
 }
 
 @keyframes popupOpen {
