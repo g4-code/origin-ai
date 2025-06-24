@@ -656,22 +656,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           // Send loading state to sidepanel
           chrome.runtime.sendMessage(loadingState);
 
-          const session = await initAISession();
+          // --- Prompt API Migration: Remove old initAISession, session is not needed ---
+          // const session = await initAISession();
+          // The new implementation does not require a session argument, so we pass null
 
           // Execute requests sequentially
           const etymology = await getEtymologyForSidePanel(
             message.text,
-            session,
+            null, // session is not needed with Prompt API
             controller.signal
           );
           const usage = await getUsageExamplesForSidePanel(
             message.text,
-            session,
+            null,
             controller.signal
           );
           const synonyms = await getSynonymsAntonymsForSidePanel(
             message.text,
-            session,
+            null,
             controller.signal
           );
 
