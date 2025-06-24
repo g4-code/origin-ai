@@ -1,2 +1,10 @@
 # ignore cursor rules
 .cursorrules
+# ignore npm modules
+node_modules
+# ignore build output
+dist
+# ignore log files
+*.log
+# ignore environment files
+.env
